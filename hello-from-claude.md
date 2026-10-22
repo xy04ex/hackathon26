@@ -9,8 +9,4 @@ If you can read this in Kiro, the pull worked.
 3. In the Source Control panel: stage the change, write a commit message (or let Kiro generate one), click **Commit**, then **Sync Changes**.
 4. Tell Claude "pushed".
 
-Yoyo's line: _(write something here)_
-
----
-
-You can delete this file once the loop works.
+Yoyo's line: _I did it!_
