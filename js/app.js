@@ -13,9 +13,6 @@
   // records can capture it. Set when the score renders.
   let todayScore = { date: null, score: null, tier: null, z: null };
 
-  // The current reordered list being checked in (the display order).
-  let orderedTasks = [];
-
   // --- localStorage history (wrapped so the app survives storage being off) --
   const STORAGE_KEY = "huifan.history.v1";
 
@@ -41,7 +38,8 @@
    * Build one check-in record in the exact shape patterns.py will read.
    * done defaults to false until the user taps.
    */
-  function buildRecord(task, done) {
+  function buildRecord(task) {
+    const status = task.status || "pending"; // pending | done | skipped
     return {
       date: todayScore.date,
       task_text: task.text,
@@ -51,7 +49,11 @@
       recovery_score: todayScore.score, // 0..100 or null
       tier: todayScore.tier, // green|yellow|red or null
       recovery_z: todayScore.z, // composite (pre-sigmoid) or null
-      done: !!done,
+      status: status,
+      skipped: status === "skipped",
+      // `done` kept for older readers; a skipped task is NOT done and must not
+      // be counted as not-done either (patterns-core excludes skipped rows).
+      done: status === "done",
     };
   }
 
@@ -220,13 +222,12 @@
     return { r: r, pts: pts };
   }
 
-  // The tasks the pot shows: the reordered check-in list if present, else the
-  // tagged tasks. done-state comes from orderedTasks when available.
+  // The tasks the pot shows: today's tasks that are not skipped. A task is
+  // "done" when its status is "done".
   function potTasks() {
-    if (orderedTasks && orderedTasks.length) {
-      return orderedTasks.map(function (t) { return { done: !!t.done }; });
-    }
-    return (tasks || []).map(function () { return { done: false }; });
+    return (tasks || [])
+      .filter(function (t) { return t.status !== "skipped"; })
+      .map(function (t) { return { done: t.status === "done" }; });
   }
 
   function drawPot() {
@@ -324,10 +325,18 @@
 
   // --- Task input + tagging (task 3) ----------------------------------
   //
-  // State: the current list of tasks. Tasks are produced by the keyword
-  // tagger, then the user may edit each task's type and effort. Later tasks
-  // (reorder, check-in) will read and extend this same list.
+  // --- Today's tasks: ONE list through the whole flow --------------------
+  //
+  // After tagging, the SAME list is reordered in place and each task carries
+  // its own done checkbox, per-task reason, and a "Not today" (skip) control.
+  // No second list. A task's status is one of: "pending" (not acted on),
+  // "done", or "skipped" (deferred to tomorrow; excluded from completion rates).
   let tasks = [];
+  let reordered = false; // has the user reordered today's list yet?
+
+  const TYPE_LABELS = window.HuifanTag.TASK_TYPES; // the five types
+  const EFFORT_LABELS = { 1: "Light", 2: "Medium", 3: "Heavy" };
+  const DUE_LABELS = { today: "Today", tomorrow: "Tomorrow", later: "Later" };
 
   function renderTasksSection() {
     const section = document.getElementById("tasks-section");
@@ -335,172 +344,80 @@
 
     section.innerHTML =
       "<h2>Today's tasks</h2>" +
-      '<p class="muted tasks-help">One task per line. We guess a type ' +
-      "from keywords — change it if we got it wrong.</p>" +
+      '<p class="muted tasks-help">One task per line. We guess a type from ' +
+      "keywords — fix any we got wrong, then reorder for today.</p>" +
       '<textarea id="task-input" class="task-input" rows="5" ' +
       'placeholder="write lab report&#10;read chapter 4&#10;' +
-      'reply to emails&#10;gym&#10;coffee with Sam"></textarea>' +
+      'reply to emails&#10;fitrec work out&#10;coffee with Sam"></textarea>' +
+      '<div class="task-actions">' +
       '<button id="tag-btn" class="btn">Tag tasks</button>' +
+      '<button id="reorder-btn" class="btn btn--secondary">Reorder for today</button>' +
+      "</div>" +
       '<ul id="task-list" class="task-list"></ul>' +
-      '<button id="reorder-btn" class="btn btn--secondary">' +
-      "Reorder for today</button>" +
-      '<div id="reorder-result" class="reorder-result"></div>';
+      '<div class="task-foot">' +
+      '<p id="reorder-note" class="reorder-note muted"></p>' +
+      '<button id="export-btn" class="btn btn--secondary">Export history (JSON)</button>' +
+      "</div>";
 
-    const tagBtn = section.querySelector("#tag-btn");
-    tagBtn.addEventListener("click", onTagClick);
-    const reorderBtn = section.querySelector("#reorder-btn");
-    reorderBtn.addEventListener("click", onReorderClick);
+    section.querySelector("#tag-btn").addEventListener("click", onTagClick);
+    section.querySelector("#reorder-btn").addEventListener("click", onReorderClick);
+    section.querySelector("#export-btn").addEventListener("click", onExportClick);
 
     renderTaskList();
-  }
-
-  function onReorderClick() {
-    const target = document.getElementById("reorder-result");
-    if (!target) return;
-    if (tasks.length === 0) {
-      target.innerHTML =
-        '<p class="muted">Add and tag some tasks first.</p>';
-      return;
-    }
-    const result = window.HuifanOrder.reorderTasks(tasks, recoveryContext);
-    renderReordered(result, target);
-  }
-
-  function renderReordered(result, target) {
-    // Keep the display order as the check-in list. Carry over any done-state
-    // already saved for today so a reload doesn't lose taps.
-    const savedToday = loadHistory()[todayScore.date] || [];
-    const doneByText = {};
-    savedToday.forEach(function (r) {
-      doneByText[r.task_text] = r.done;
-    });
-
-    orderedTasks = result.ordered.map(function (t) {
-      return Object.assign({}, t, {
-        done: doneByText[t.text] === true,
-      });
-    });
-
-    target.innerHTML =
-      '<h3 class="reorder-title">Your order for today</h3>' +
-      '<p class="reorder-note muted">' +
-      escapeHtml(result.notes) +
-      "</p>" +
-      '<p class="checkin-hint muted">Tap a task to mark it done. ' +
-      "Saved automatically.</p>" +
-      '<ol id="checkin-list" class="ordered-list"></ol>' +
-      '<button id="export-btn" class="btn btn--secondary">' +
-      "Export history (JSON)</button>";
-
-    renderCheckinList();
-
-    const exportBtn = document.getElementById("export-btn");
-    if (exportBtn) exportBtn.addEventListener("click", onExportClick);
-
-    // Persist today's list immediately so a record exists even before taps.
-    persistToday();
-    drawPot();
-  }
-
-  function renderCheckinList() {
-    const list = document.getElementById("checkin-list");
-    if (!list) return;
-
-    list.innerHTML = orderedTasks
-      .map(function (t, idx) {
-        const moved = t.movedBy
-          ? '<span class="move-reason">' + escapeHtml(t.movedBy) + "</span>"
-          : "";
-        const chunk = t.chunk
-          ? '<span class="chunk-hint">' + escapeHtml(t.chunk) + "</span>"
-          : "";
-        const doneClass = t.done ? " ordered-item--done" : "";
-        const check = t.done ? "✓" : "○";
-        return (
-          '<li class="ordered-item checkin-item' +
-          doneClass +
-          '" data-idx="' +
-          idx +
-          '" role="button" tabindex="0" ' +
-          'aria-pressed="' +
-          (t.done ? "true" : "false") +
-          '">' +
-          '<span class="checkbox">' +
-          check +
-          "</span>" +
-          '<span class="ordered-main">' +
-          '<span class="ordered-text">' +
-          escapeHtml(t.text) +
-          "</span>" +
-          '<span class="ordered-tags">' +
-          '<span class="pill">' +
-          escapeHtml(t.type) +
-          "</span>" +
-          '<span class="pill">effort ' +
-          t.effort +
-          "</span>" +
-          '<span class="pill">due ' +
-          escapeHtml(t.due || "later") +
-          "</span>" +
-          "</span>" +
-          moved +
-          chunk +
-          "</span>" +
-          "</li>"
-        );
-      })
-      .join("");
-
-    // One tap toggles done. Keyboard (Enter/Space) works too for a11y.
-    list.querySelectorAll(".checkin-item").forEach(function (li) {
-      li.addEventListener("click", function () {
-        toggleDone(Number(li.getAttribute("data-idx")));
-      });
-      li.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggleDone(Number(li.getAttribute("data-idx")));
-        }
-      });
-    });
-  }
-
-  function toggleDone(idx) {
-    if (!orderedTasks[idx]) return;
-    orderedTasks[idx].done = !orderedTasks[idx].done;
-    persistToday();
-    renderCheckinList();
-    drawPot();
-  }
-
-  function persistToday() {
-    const records = orderedTasks.map(function (t) {
-      return buildRecord(t, t.done);
-    });
-    saveTodayRecords(records);
-  }
-
-  function onExportClick() {
-    const all = flattenHistory();
-    const blob = new Blob([JSON.stringify(all, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "huifan-history.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 
   function onTagClick() {
     const input = document.getElementById("task-input");
     if (!input) return;
-    tasks = window.HuifanTag.parseTasks(input.value);
+    tasks = window.HuifanTag.parseTasks(input.value).map(function (t) {
+      return Object.assign({}, t, { status: "pending" });
+    });
+    reordered = false;
+    // Carry over any status already saved for today (so a re-tag keeps taps).
+    const savedToday = loadHistory()[todayScore.date] || [];
+    const byText = {};
+    savedToday.forEach(function (r) { byText[r.task_text] = r; });
+    // Also pull any tasks the user deferred yesterday into today's input is
+    // handled at boot (prefillDeferred); here we just restore status.
+    tasks.forEach(function (t) {
+      const prev = byText[t.text];
+      if (prev && prev.status) t.status = prev.status;
+      else if (prev && typeof prev.done === "boolean") t.status = prev.done ? "done" : "pending";
+    });
+    setReorderNote("");
     renderTaskList();
+    persistToday();
     drawPot();
+  }
+
+  function onReorderClick() {
+    if (tasks.length === 0) {
+      setReorderNote("Add and tag some tasks first.");
+      return;
+    }
+    // Reorder the active (non-skipped) tasks in place; skipped tasks drop out
+    // of today's order entirely.
+    const active = tasks.filter(function (t) { return t.status !== "skipped"; });
+    const result = window.HuifanOrder.reorderTasks(active, recoveryContext);
+    // Rebuild `tasks` as: reordered active tasks, then skipped ones appended,
+    // carrying the per-task reason/chunk annotations onto the same objects.
+    const annotById = {};
+    result.ordered.forEach(function (o) { annotById[o.id] = o; });
+    const skipped = tasks.filter(function (t) { return t.status === "skipped"; });
+    tasks = result.ordered.map(function (o) {
+      const orig = active.find(function (t) { return t.id === o.id; }) || {};
+      return Object.assign(orig, { movedBy: o.movedBy, chunk: o.chunk });
+    }).concat(skipped);
+    reordered = true;
+    setReorderNote(result.notes);
+    renderTaskList();
+    persistToday();
+    drawPot();
+  }
+
+  function setReorderNote(text) {
+    const n = document.getElementById("reorder-note");
+    if (n) n.textContent = text || "";
   }
 
   function renderTaskList() {
@@ -509,79 +426,131 @@
 
     if (tasks.length === 0) {
       list.innerHTML =
-        '<li class="muted task-empty">No tasks yet. ' +
-        "Type some above and tag them.</li>";
+        '<li class="muted task-empty">No tasks yet. Type some above and tag them.</li>';
       return;
     }
 
-    const types = window.HuifanTag.TASK_TYPES;
-    list.innerHTML = tasks
-      .map(function (t, idx) {
-        const options = types
-          .map(function (ty) {
-            const sel = ty === t.type ? " selected" : "";
-            return '<option value="' + ty + '"' + sel + ">" + ty + "</option>";
-          })
-          .join("");
-        const effortOptions = [1, 2, 3]
-          .map(function (e) {
-            const sel = e === t.effort ? " selected" : "";
-            return '<option value="' + e + '"' + sel + ">" + e + "</option>";
-          })
-          .join("");
-        const dues = ["today", "tomorrow", "later"];
-        const dueOptions = dues
-          .map(function (d) {
-            const sel = d === (t.due || "later") ? " selected" : "";
-            return '<option value="' + d + '"' + sel + ">" + d + "</option>";
-          })
-          .join("");
-        return (
-          '<li class="task-item">' +
-          '<span class="task-text">' +
-          escapeHtml(t.text) +
-          "</span>" +
-          '<span class="task-controls">' +
-          '<select class="task-type" data-idx="' +
-          idx +
-          '" aria-label="Task type">' +
-          options +
-          "</select>" +
-          '<select class="task-effort" data-idx="' +
-          idx +
-          '" aria-label="Effort 1 to 3">' +
-          effortOptions +
-          "</select>" +
-          '<select class="task-due" data-idx="' +
-          idx +
-          '" aria-label="Due when">' +
-          dueOptions +
-          "</select>" +
-          "</span>" +
-          "</li>"
-        );
-      })
-      .join("");
+    list.innerHTML = tasks.map(renderTaskItem).join("");
+    wireTaskControls(list);
+  }
 
-    // Wire the editable dropdowns back into state.
+  // One task row: checkbox + text (+ guessed flag) + editable labelled selects
+  // + per-task reason + "Not today".
+  function renderTaskItem(t, idx) {
+    const typeOpts = TYPE_LABELS.map(function (ty) {
+      return '<option value="' + ty + '"' + (ty === t.type ? " selected" : "") + ">" + ty + "</option>";
+    }).join("");
+    const effortOpts = [1, 2, 3].map(function (e) {
+      return '<option value="' + e + '"' + (e === t.effort ? " selected" : "") + ">" + EFFORT_LABELS[e] + "</option>";
+    }).join("");
+    const dueVal = t.due || "later";
+    const dueOpts = ["today", "tomorrow", "later"].map(function (d) {
+      return '<option value="' + d + '"' + (d === dueVal ? " selected" : "") + ">" + DUE_LABELS[d] + "</option>";
+    }).join("");
+
+    const skipped = t.status === "skipped";
+    const done = t.status === "done";
+    const guessedFlag = t.guessed
+      ? '<span class="guessed-flag" title="No keyword matched; we guessed. Check the type.">guessed — check the type</span>'
+      : "";
+    const reason = (reordered && t.movedBy)
+      ? '<span class="move-reason">' + escapeHtml(t.movedBy) + "</span>" : "";
+    const chunk = (reordered && t.chunk)
+      ? '<span class="chunk-hint">' + escapeHtml(t.chunk) + "</span>" : "";
+
+    return (
+      '<li class="task-item' + (done ? " task-item--done" : "") + (skipped ? " task-item--skipped" : "") +
+      '" data-idx="' + idx + '">' +
+      '<button class="task-check" data-idx="' + idx + '" role="checkbox" ' +
+      'aria-checked="' + (done ? "true" : "false") + '" ' +
+      'aria-label="Mark done" ' + (skipped ? "disabled" : "") + ">" +
+      (done ? "\u2713" : "\u25CB") + "</button>" +
+      '<span class="task-main">' +
+      '<span class="task-text">' + escapeHtml(t.text) + "</span> " + guessedFlag +
+      '<span class="task-controls">' +
+      '<label class="ctl"><span class="ctl-label">Type</span>' +
+      '<select class="task-type" data-idx="' + idx + '">' + typeOpts + "</select></label>" +
+      '<label class="ctl"><span class="ctl-label">Effort</span>' +
+      '<select class="task-effort" data-idx="' + idx + '">' + effortOpts + "</select></label>" +
+      '<label class="ctl"><span class="ctl-label">Due</span>' +
+      '<select class="task-due" data-idx="' + idx + '">' + dueOpts + "</select></label>" +
+      "</span>" +
+      reason + chunk +
+      (skipped ? '<span class="skip-flag">Not today — moves to tomorrow</span>' : "") +
+      "</span>" +
+      '<button class="task-skip" data-idx="' + idx + '">' +
+      (skipped ? "Undo" : "Not today") + "</button>" +
+      "</li>"
+    );
+  }
+
+  function wireTaskControls(list) {
     list.querySelectorAll(".task-type").forEach(function (sel) {
       sel.addEventListener("change", function (e) {
         const i = Number(e.target.getAttribute("data-idx"));
-        if (tasks[i]) tasks[i].type = e.target.value;
+        if (tasks[i]) { tasks[i].type = e.target.value; tasks[i].guessed = false; persistToday(); }
       });
     });
     list.querySelectorAll(".task-effort").forEach(function (sel) {
       sel.addEventListener("change", function (e) {
         const i = Number(e.target.getAttribute("data-idx"));
-        if (tasks[i]) tasks[i].effort = Number(e.target.value);
+        if (tasks[i]) { tasks[i].effort = Number(e.target.value); persistToday(); }
       });
     });
     list.querySelectorAll(".task-due").forEach(function (sel) {
       sel.addEventListener("change", function (e) {
         const i = Number(e.target.getAttribute("data-idx"));
-        if (tasks[i]) tasks[i].due = e.target.value;
+        if (tasks[i]) { tasks[i].due = e.target.value; persistToday(); }
       });
     });
+    list.querySelectorAll(".task-check").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        toggleDone(Number(btn.getAttribute("data-idx")));
+      });
+    });
+    list.querySelectorAll(".task-skip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        toggleSkip(Number(btn.getAttribute("data-idx")));
+      });
+    });
+  }
+
+  function toggleDone(idx) {
+    const t = tasks[idx];
+    if (!t || t.status === "skipped") return;
+    t.status = t.status === "done" ? "pending" : "done";
+    persistToday();
+    renderTaskList();
+    drawPot();
+  }
+
+  // "Not today": skip the task — it leaves today's order, logs as "skipped",
+  // and is pre-filled into tomorrow's list at next boot. Toggling again undoes.
+  function toggleSkip(idx) {
+    const t = tasks[idx];
+    if (!t) return;
+    t.status = t.status === "skipped" ? "pending" : "skipped";
+    persistToday();
+    renderTaskList();
+    drawPot();
+  }
+
+  function persistToday() {
+    const records = tasks.map(function (t) { return buildRecord(t); });
+    saveTodayRecords(records);
+  }
+
+  function onExportClick() {
+    const all = flattenHistory();
+    const blob = new Blob([JSON.stringify(all, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "huifan-history.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   // Count the days the user has logged a check-in (one key per date with
@@ -637,6 +606,29 @@
     return a ? window.HuifanPatternsCore.demotableTypes(a) : [];
   }
 
+  // "Not today" carries a task forward: on a later day, any task skipped on the
+  // most recent prior logged day is pre-filled into today's input so it
+  // reappears in tomorrow's list. Pure of the current day's edits.
+  function prefillDeferredTasks() {
+    const input = document.getElementById("task-input");
+    if (!input || input.value.trim() !== "") return; // don't clobber typed text
+    const history = loadHistory();
+    const today = todayScore.date;
+    const priorDates = Object.keys(history)
+      .filter(function (d) { return d !== today && Array.isArray(history[d]); })
+      .sort();
+    if (priorDates.length === 0) return;
+    const last = priorDates[priorDates.length - 1];
+    const deferred = history[last]
+      .filter(function (r) { return r.status === "skipped"; })
+      .map(function (r) { return r.task_text; });
+    if (deferred.length === 0) return;
+    input.value = deferred.join("\n");
+    // Tag them immediately so they show up as today's list, carrying status
+    // "pending" (a fresh day).
+    onTagClick();
+  }
+
   // --- Boot -----------------------------------------------------------
   //
   // render() is the whole-page render. It is exposed as window.HuifanApp.render
@@ -664,6 +656,7 @@
     if (window.HuifanInsights) {
       window.HuifanInsights.renderInsights("insights-section");
     }
+    prefillDeferredTasks();
   }
 
   window.HuifanApp = { render: render };

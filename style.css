@@ -190,123 +190,133 @@ body {
 
 .task-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
   padding: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--bg);
 }
-.task-text { flex: 1 1 auto; word-break: break-word; }
+.task-empty { padding: 6px 0; }
+
+/* round done checkbox */
+.task-check {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.task-check[aria-checked="true"] { color: var(--good); border-color: var(--good); }
+.task-check:focus-visible { outline: 2px solid var(--accent); }
+.task-check:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.task-main { flex: 1 1 auto; min-width: 0; }
+.task-text { font-weight: 600; word-break: break-word; }
+
+.guessed-flag {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  margin-left: 4px;
+  border-radius: 999px;
+  color: var(--mid);
+  background: var(--mid-soft);
+  border: 1px dashed var(--mid);
+}
 
 .task-controls {
-  flex: 0 0 auto;
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
 }
+.ctl { display: inline-flex; flex-direction: column; gap: 2px; }
+.ctl-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink3);
+  font-family: var(--mono);
+}
+/* labelled selects with a visible dropdown arrow so they look clickable */
 .task-type,
 .task-effort,
 .task-due {
   -webkit-appearance: none;
   appearance: none;
-  padding: 5px 6px;
-  border: 1px solid var(--border);
+  padding: 5px 26px 5px 8px;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--card);
+  background-color: var(--card);
   color: var(--text);
   font: inherit;
   font-size: 0.85rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%239A8A7C' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
 }
-.task-effort { width: 52px; }
+.task-type:focus-visible,
+.task-effort:focus-visible,
+.task-due:focus-visible { outline: 2px solid var(--accent); }
 
-/* Stack controls under text on narrow phones. */
-@media (max-width: 380px) {
-  .task-item { flex-direction: column; align-items: stretch; }
-  .task-controls { justify-content: flex-start; }
+.task-skip {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.task-skip:hover { border-color: var(--bad); color: var(--bad); }
+
+.task-item--done { opacity: 0.7; }
+.task-item--done .task-text { text-decoration: line-through; }
+.task-item--skipped { opacity: 0.55; }
+.task-item--skipped .task-text { text-decoration: line-through; }
+
+.move-reason {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-top: 5px;
+}
+.chunk-hint {
+  display: inline-block;
+  font-size: 0.78rem;
+  color: var(--mid);
+  margin-top: 3px;
+}
+.skip-flag {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--ink3);
+  margin-top: 4px;
 }
 
-/* --- Reorder section --- */
+.task-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.task-foot { margin-top: 14px; }
+.reorder-note { margin: 0 0 10px; font-size: 0.85rem; min-height: 1em; }
 .btn--secondary {
   background: transparent;
   color: var(--accent);
   border: 1px solid var(--accent);
 }
-.reorder-result { margin-top: 14px; }
-.reorder-title { margin: 0 0 4px; font-size: 1.05rem; }
-.reorder-note { margin: 0 0 10px; font-size: 0.85rem; }
 
-.ordered-list {
-  margin: 0;
-  padding-left: 1.4em;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.ordered-item {
-  padding: 8px 2px;
-  border-bottom: 1px solid var(--border);
-}
-.ordered-text { font-weight: 600; }
-.ordered-tags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: 8px;
-}
-.pill {
-  font-size: 0.72rem;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-}
-.move-reason {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-top: 3px;
-}
-.chunk-hint {
-  display: inline-block;
-  font-size: 0.78rem;
-  color: var(--yellow);
-  margin-top: 3px;
-}
-
-/* --- Evening check-in --- */
-.checkin-hint { margin: 0 0 10px; font-size: 0.82rem; }
-
-.checkin-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
-  list-style: none;
-  margin-left: -1.4em; /* cancel the <ol> indent for tappable rows */
-  padding: 10px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  user-select: none;
-}
-.checkin-item:hover { border-color: var(--accent); }
-.checkin-item:focus-visible { outline: 2px solid var(--accent); }
-
-.checkbox {
-  flex: 0 0 auto;
-  font-size: 1.25rem;
-  line-height: 1.2;
-  color: var(--muted);
-}
-.ordered-main { flex: 1 1 auto; }
-
-.ordered-item--done {
-  opacity: 0.6;
-}
-.ordered-item--done .checkbox { color: var(--green); }
-.ordered-item--done .ordered-text {
-  text-decoration: line-through;
+/* Stack controls under text on narrow phones. */
+@media (max-width: 420px) {
+  .task-controls { gap: 8px; }
 }
 
 /* --- Patterns page --- */
