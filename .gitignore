@@ -4,6 +4,9 @@ export.xml
 apple_health_export/
 data/daily.json
 data/daily.js
+# Insights are computed in the browser; real aggregates must not be committed.
+data/insights.json
+data/insights.js
 
 # Secrets — never commit
 .env
