@@ -99,8 +99,27 @@
 
   // --- Rendering ------------------------------------------------------
 
+  // Real data arrives two ways: an in-browser UPLOAD (saved to localStorage
+  // huifan.daily.v1 by onboarding) or the DEVELOPER local file data/daily.js
+  // (a static <script> that only sets the global, never localStorage). Word the
+  // badge accordingly.
+  function realDataFromUpload() {
+    try {
+      var raw = window.localStorage.getItem("huifan.daily.v1");
+      return !!raw && raw !== "[]";
+    } catch (e) {
+      return false; // storage off -> can't be an upload; treat as local file
+    }
+  }
+
   function renderDataBadge(source) {
     if (source === "real") {
+      if (realDataFromUpload()) {
+        return (
+          '<p class="data-badge data-badge--real">Using your uploaded Apple ' +
+          "Health data (stored in this browser)</p>"
+        );
+      }
       return (
         '<p class="data-badge data-badge--real">Using your data ' +
         "(data/daily.js)</p>"
