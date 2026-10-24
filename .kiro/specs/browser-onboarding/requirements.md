@@ -20,6 +20,7 @@ The parsed output must be **byte-for-byte equivalent in records** to what `scrip
 - **Asleep_Stage**: An Apple Health `SleepAnalysis` value in the set {`HKCategoryValueSleepAnalysisAsleep`, `HKCategoryValueSleepAnalysisAsleepCore`, `HKCategoryValueSleepAnalysisAsleepDeep`, `HKCategoryValueSleepAnalysisAsleepREM`, `HKCategoryValueSleepAnalysisAsleepUnspecified`}. Values `InBed` and `Awake` are excluded.
 - **Wake_Date**: The calendar date of a sleep interval's end time, used to assign the interval to a night.
 - **Daily_Mean**: The arithmetic mean of a day's values for a quantity metric, rounded to 2 decimal places, or `null` when the day has no values.
+- **Sample_Dataset**: The bundled synthetic dataset exposed as `window.HUIFAN_SAMPLE_DAILY` (from `data/sample-daily.js`), used for the "Try with sample data" path. It is never saved to the Browser_Store and never assigned to `window.HUIFAN_DAILY`.
 
 ## Requirements
 
@@ -120,6 +121,18 @@ The parsed output must be **byte-for-byte equivalent in records** to what `scrip
 1. WHEN the Parse_Worker produces a Daily_Dataset with fewer than 7 days, THE Onboarding_UI SHALL save the Daily_Dataset and complete onboarding.
 2. WHEN a Daily_Dataset with fewer than 7 days is loaded, THE app SHALL keep its existing "still learning your baseline" state and SHALL NOT block onboarding.
 
+### Requirement 9: Try with sample data
+
+**User Story:** As someone opening the demo link without an Apple Health export, I want to try 烩饭 with bundled sample data, so that I can see how it works without uploading anything.
+
+#### Acceptance Criteria
+
+1. THE Onboarding_UI SHALL display a "Try with sample data" control on the first-run screen.
+2. WHEN a user activates the "Try with sample data" control, THE Onboarding_UI SHALL load the Sample_Dataset (`window.HUIFAN_SAMPLE_DAILY`) and render the app from the Sample_Dataset.
+3. WHEN the user tries with sample data, THE Onboarding_UI SHALL NOT save the Sample_Dataset to the Browser_Store and SHALL NOT set `window.HUIFAN_DAILY`.
+4. WHEN the app renders from the Sample_Dataset, THE Onboarding_UI SHALL display an indication that it is showing sample (synthetic) data, consistent with the existing sample data badge.
+5. WHILE the app is showing the Sample_Dataset, THE Onboarding_UI SHALL allow the user to return to the first-run screen to upload a real Health_Export.
+
 ## Correctness Properties (for property-based testing)
 
 These properties target the parity-critical logic and should be tested with fast-check against pure functions, independent of the DOM and the Web Worker.
@@ -134,6 +147,7 @@ These properties target the parity-critical logic and should be tested with fast
 8. **Rounding (Invariant)**: For any day with values, each Daily_Mean and `sleep_h` has at most 2 decimal places and equals the full-precision value rounded to 2 decimals.
 9. **Last-N-months filter (Metamorphic)**: For any dataset, the "last 6 months" result is a subset of the "everything" result containing exactly the records whose assigned date is within 6 months of the most recent record date; the "everything" result is unchanged by the filter.
 10. **Idempotence of save/load**: Saving a Daily_Dataset to the Browser_Store and loading it back yields an equal Daily_Dataset (serialize/deserialize round-trip).
+11. **Sample data does not persist (Invariant)**: After the "Try with sample data" path runs, the Browser_Store contains no saved Daily_Dataset attributable to onboarding and `window.HUIFAN_DAILY` is not set to the sample data; the sample path is purely in-memory for the session.
 
 ## Future / Out of Scope
 

@@ -139,21 +139,25 @@ incremental scanner (no `DOMParser`). Unzip feature-detects native
 
   - [ ] 7.3 Build the first-run screen, file picker, and range radios
     - In `mount(sectionId)`: render the three export steps (open Health, open profile, "Export All Health Data"), an `<input type="file" accept=".zip">`, the one-line privacy statement, and two range radios ("Last 6 months" default, "Everything") mapping to `range: "6m" | "all"`
+    - Also render a "Try with sample data" control on the first-run screen so a visitor without an export can see the demo
     - Add a `matchMedia("(max-width: 480px)")` note that uploading from a computer is easier, without blocking the picker
-    - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.2, 7.1, 7.2, 7.3_
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.2, 7.1, 7.2, 7.3, 9.1, 9.4_
 
   - [ ] 7.4 Wire worker lifecycle: progress, cancel, errors, success
     - On file select, create the worker and post `{type:"parse", file, range}`; show a determinate progress bar from `progress` messages and a Cancel button that calls `worker.terminate()` + posts `cancel`, discards partial state, and returns to the picker
     - Map each `error.reason` (`not-a-zip`/`no-export-xml` → one friendly "doesn't look like an Apple Health export" line; `parse-failed` → calm error) to copy, discard partial data, never save, and return to the picker; treat worker `onerror` as `parse-failed`
     - On `done`: `saveDataset(rows)`, set `window.HUIFAN_DAILY = rows`, call the app re-render entry; add a "Delete my data" control calling `deleteDataset()` and returning to first-run
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 6.1, 6.2, 6.3, 6.4_
+    - Wire the sample-data path: on activating "Try with sample data", read `window.HUIFAN_SAMPLE_DAILY` and call `window.HuifanApp.render` to render from it WITHOUT calling `saveDataset` and WITHOUT setting `window.HUIFAN_DAILY` (sample stays in-memory for the session; the existing sample badge surfaces naturally); add a "Use my own export" back control that returns to the first-run screen
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 6.1, 6.2, 6.3, 6.4, 9.2, 9.3, 9.5_
 
   - [ ]* 7.5 Write example tests for the UI flow
     - Mount shows the three steps, picker, privacy line, range radios with "Last 6 months" default, and delete control (1.2–1.4, 3.1, 3.2, 6.3)
     - Cancel terminates the worker and saves nothing (4.3); error reasons map to friendly copy and return to the picker (4.4–4.6)
     - No network call during a parse: mock `fetch`/`XMLHttpRequest`/`sendBeacon`, assert zero calls (2.5)
+    - Activating "Try with sample data" renders from `window.HUIFAN_SAMPLE_DAILY`, shows the sample badge, does NOT write the Browser_Store key, does NOT set `window.HUIFAN_DAILY`, and offers a way back to first-run (9.1–9.5)
+    - **Property 12: Sample data does not persist** — after the "Try with sample data" path runs, the Browser_Store holds no onboarding-saved Daily_Dataset and `window.HUIFAN_DAILY` is not set to the sample data; tag `// Feature: browser-onboarding, Property 12: Sample data does not persist`; fast-check, min 100 iterations; load via `createRequire`
     - Phone-width note appears under a narrow media query without blocking the picker (7.2, 7.3)
-    - _Requirements: 1.2, 1.3, 1.4, 2.5, 3.1, 3.2, 4.3, 4.4, 4.5, 4.6, 6.3, 7.2, 7.3_
+    - _Requirements: 1.2, 1.3, 1.4, 2.5, 3.1, 3.2, 4.3, 4.4, 4.5, 4.6, 6.3, 7.2, 7.3, 9.1, 9.2, 9.3, 9.4, 9.5_
 
 - [ ] 8. Wire onboarding into the app (`index.html`, `js/app.js`)
   - [ ] 8.1 Add the bootstrap hydration before app.js
@@ -171,17 +175,23 @@ incremental scanner (no `DOMParser`). Unzip feature-detects native
     - After a successful parse, `pickDataSource()` returns `source: "real"` from `window.HUIFAN_DAILY`; a `<7`-day dataset still completes and the app shows "still learning your baseline"
     - _Requirements: 6.1, 6.2, 8.1, 8.2_
 
-- [ ]* 9. Optional large-export streaming check
-  - [ ]* 9.1 Add an optional heavy-fixture streaming test
-    - Generate a ~tens-of-MB synthetic export (no real data) and confirm the worker completes and stays streaming without buffering the whole decompressed XML; keep it out of the default fast run
-    - _Requirements: 2.4_
+- [ ] 9. Real-export end-to-end parity verification (manual)
+  - This is a **manual verification step the user performs** with their own real `export.zip`; it is NOT an automated test. The agent's build responsibility is to provide the download/read affordance in task 9.1(a) and the exact diff command in 9.1(b). The real `export.zip` and `data/daily.json` are git-ignored and MUST NOT be committed.
+  - [ ] 9.1 Verify the browser parse equals `scripts/parse_health.py` on a real export
+    - (a) Provide a way to obtain the browser-produced dataset as JSON: add a small "Download parsed JSON" affordance after a successful parse, OR document reading the saved dataset from the `localStorage` key `huifan.daily.v1`. Preferred: let the user save the browser JSON to `/tmp/browser-daily.json` pretty-printed with 2-space indent to match `parse_health.py`'s `json.dump(indent=2)`
+    - Manual procedure: serve the app over http, upload the real `export.zip` in the browser, choose the "Everything" range, and save the resulting Daily_Dataset to `/tmp/browser-daily.json`; then run `python3 scripts/parse_health.py export.zip` to produce `data/daily.json`
+    - (b) Diff the two outputs — they MUST match exactly (both re-serialized sorted so key order and formatting are irrelevant):
+      ```sh
+      diff <(python3 -c "import json,sys; print(json.dumps(json.load(open('/tmp/browser-daily.json')),indent=2,sort_keys=True))") <(python3 -c "import json,sys; print(json.dumps(json.load(open('data/daily.json')),indent=2,sort_keys=True))") && echo MATCH
+      ```
+    - _Requirements: 2.4, 5.11_
 
 - [ ] 10. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
 
-- Tasks marked with `*` are optional and can be skipped for a faster MVP (all are test or heavy-fixture tasks; no core implementation is optional).
+- Tasks marked with `*` are optional and can be skipped for a faster MVP (all are automated test tasks; no core implementation is optional). Task 9 is **required**: it is a manual real-export parity verification the user runs, with the agent supplying the download affordance and the diff command.
 - Each task references specific requirement sub-clauses and/or design properties for traceability.
 - The parity test (3.1) is the gate for Requirement 5.11 — `round2` must match Python's banker's rounding on the fixture.
 - Property-based tests use fast-check with at least 100 iterations each and are loaded via `createRequire`, matching the existing `tests/score.property.test.js`.

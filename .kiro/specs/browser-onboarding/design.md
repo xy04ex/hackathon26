@@ -168,7 +168,9 @@ window.HuifanOnboarding = {
   loadDataset(): Daily_Record[] | null,
   deleteDataset(): void,            // removes key + clears window.HUIFAN_DAILY
   STORAGE_KEY: "huifan.daily.v1",
-  // Mounts the flow into a container element id. (1.2–1.4, 3.x, 4.x, 7.x)
+  // Mounts the flow into a container element id. (1.2–1.4, 3.x, 4.x, 7.x).
+  // mount also wires a "Try with sample data" button that renders from
+  // window.HUIFAN_SAMPLE_DAILY for the session; it adds no new persisted state.
   mount(sectionId): void,
 };
 ```
@@ -193,6 +195,16 @@ window.HuifanOnboarding = {
   then re-render the app (call the same render entry `app.js` uses on boot).
 - **Delete (6.3, 6.4):** a "Delete my data" control calls `deleteDataset()` and
   returns to the first-run screen.
+- **Try with sample data (9.1–9.5):** a "Try with sample data" control on the
+  first-run screen. On activation it reads `window.HUIFAN_SAMPLE_DAILY` (the
+  bundled synthetic `Sample_Dataset` from `data/sample-daily.js`) and calls the
+  app re-render entry (`window.HuifanApp.render`) to render from it — **without**
+  calling `saveDataset` and **without** setting `window.HUIFAN_DAILY`, so the
+  sample stays in-memory for the session only. Because `app.js`'s
+  `pickDataSource` already shows the "sample" badge when `window.HUIFAN_DAILY` is
+  absent and the sample global is present, rendering this way naturally surfaces
+  the synthetic-data badge. A "Use my own export" back control returns to the
+  first-run screen so the user can switch to parsing their own export.
 - **Phone-width note (7.2, 7.3):** `matchMedia("(max-width: 480px)")` adds a
   calm note that uploading from a computer is easier, without blocking the
   picker.
@@ -500,6 +512,14 @@ as feeding the whole text at once.
 
 **Validates: Requirements 2.3**
 
+### Property 12: Sample data does not persist (invariant)
+
+*For any* run of the "Try with sample data" path, the Browser_Store holds no
+onboarding-saved Daily_Dataset and window.HUIFAN_DAILY is not set to the sample
+data; the sample path is purely in-memory for the session.
+
+**Validates: Requirements 9.3**
+
 ## Error Handling
 
 | Condition | Where detected | Behavior | Requirement |
@@ -571,6 +591,9 @@ and storage side-effects are covered by example/integration tests instead.
 - Storage-unavailable path still exposes the global for the session (6.5).
 - No network call during a parse (mock `fetch`/`XMLHttpRequest`/`sendBeacon`,
   assert zero calls) (2.5).
+- Activating "Try with sample data" renders from `window.HUIFAN_SAMPLE_DAILY`,
+  shows the sample badge, does NOT write the Browser_Store key, does NOT set
+  `window.HUIFAN_DAILY`, and offers a way back to first-run (9.1–9.5).
 - Phone-width note appears under a narrow media query without blocking the
   picker (7.2, 7.3).
 - A `<7`-day dataset is saved, onboarding completes, and the app shows "still
