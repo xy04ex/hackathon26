@@ -106,13 +106,32 @@
   }
 
   // --- dailyMean ----------------------------------------------------------
+  // Compensated (Neumaier) summation — CPython's float sum() uses this since
+  // 3.12, and a naive left-to-right fold can land on the OTHER side of a 2-dp
+  // rounding boundary (e.g. 132.105 vs 132.10500000000002 for three real HRV
+  // values). To keep byte-for-byte parity with parse_health.py's
+  // round(sum(values)/len, 2) we must sum the SAME way Python does.
+  function neumaierSum(values) {
+    var sum = 0.0;
+    var c = 0.0; // running compensation for lost low-order bits
+    for (var i = 0; i < values.length; i++) {
+      var x = values[i];
+      var t = sum + x;
+      if (Math.abs(sum) >= Math.abs(x)) {
+        c += (sum - t) + x;
+      } else {
+        c += (x - t) + sum;
+      }
+      sum = t;
+    }
+    return sum + c;
+  }
+
   // Mean of values rounded to 2dp, or null when empty (never 0). Mirrors
-  // parse_health.mean_or_none.
+  // parse_health.mean_or_none, including Python's compensated sum().
   function dailyMean(values) {
     if (!values || values.length === 0) return null;
-    var sum = 0;
-    for (var i = 0; i < values.length; i++) sum += values[i];
-    return round2(sum / values.length);
+    return round2(neumaierSum(values) / values.length);
   }
 
   // --- mergeIntervals -----------------------------------------------------
@@ -154,12 +173,21 @@
   //   scanner.records          -> RawRecord[]  accumulated so far
   //   scanner.end()            -> void  (no-op; present for symmetry)
   // RawRecord = { type, value?, startDate?, endDate? }
+  //
+  // CRITICAL for large exports: the scanner retains NOTHING. Each complete
+  // <Record> is handed to an onRecord callback and dropped. The caller folds it
+  // into the accumulators immediately, so memory stays flat even for a ~1 GB
+  // decompressed XML (a real export has ~1.5M+ records). For the tests, an
+  // optional { collect: true } keeps a records[] array for convenience.
   var ATTR_RE = /(\w+)\s*=\s*"([^"]*)"/g;
-  function extractRecordsFromChunks() {
+  function extractRecordsFromChunks(opts) {
+    opts = opts || {};
+    var onRecord = typeof opts.onRecord === "function" ? opts.onRecord : null;
+    var collect = !!opts.collect || !onRecord; // default: collect if no callback
     var buffer = "";
-    var records = [];
+    var records = collect ? [] : null;
 
-    function parseRecordTag(tag) {
+    function emit(tag) {
       // tag is the text between "<Record" and the closing "/>" or ">".
       var attrs = {};
       ATTR_RE.lastIndex = 0;
@@ -167,12 +195,14 @@
       while ((m = ATTR_RE.exec(tag)) !== null) {
         attrs[m[1]] = m[2];
       }
-      records.push({
+      var rec = {
         type: attrs.type,
         value: attrs.value,
         startDate: attrs.startDate,
         endDate: attrs.endDate,
-      });
+      };
+      if (onRecord) onRecord(rec);
+      if (collect) records.push(rec);
     }
 
     function push(chunk) {
@@ -184,22 +214,23 @@
           if (buffer.length > 8) buffer = buffer.slice(buffer.length - 8);
           return;
         }
+        // Drop anything before the open tag so the buffer never grows with
+        // the skipped XML between Records.
+        if (open > 0) buffer = buffer.slice(open);
         // Find the end of this element. Self-closing "/>" or a plain ">".
         // Attribute values are quoted and cannot contain a bare '>' in valid
         // Apple exports, so the first '>' after the open tag ends the element.
-        var gt = buffer.indexOf(">", open);
+        var gt = buffer.indexOf(">");
         if (gt === -1) {
-          // Element not complete yet — wait for more chunks. Drop anything
-          // before the open tag so the buffer stays flat.
-          buffer = buffer.slice(open);
+          // Element not complete yet — wait for more chunks.
           return;
         }
-        var inner = buffer.slice(open + "<Record".length, gt);
+        var inner = buffer.slice("<Record".length, gt);
         // Strip a trailing '/' for self-closing tags.
         if (inner.charAt(inner.length - 1) === "/") {
           inner = inner.slice(0, inner.length - 1);
         }
-        parseRecordTag(inner);
+        emit(inner);
         buffer = buffer.slice(gt + 1);
       }
     }
@@ -208,7 +239,7 @@
       push: push,
       end: function () {},
       get records() {
-        return records;
+        return records || [];
       },
     };
   }
@@ -290,29 +321,43 @@
     });
   }
 
-  // --- parseXmlText: convenience for tests and the worker -----------------
-  // Stream a whole XML string (optionally pre-split by the caller) through the
-  // scanner + accumulators and build the dataset. For true streaming the worker
-  // calls the pieces directly; this helper keeps the parity test simple.
-  function parseXmlChunks(chunks, range) {
-    var scanner = extractRecordsFromChunks();
+  // --- createStreamingParser: the memory-flat streaming API ---------------
+  //
+  // The worker feeds decoded XML text chunks via push(text); each complete
+  // <Record> is folded into the accumulators immediately and dropped (nothing
+  // is retained). finish(range) builds the dataset. recordCount lets the caller
+  // treat "0 records parsed" as an error rather than an empty success.
+  function createStreamingParser() {
     var acc = newAccumulators();
-    var seen = 0;
-    for (var i = 0; i < chunks.length; i++) {
-      scanner.push(chunks[i]);
-      // Drain newly-parsed records into the accumulators as we go, so memory
-      // stays flat (we don't keep the full record list around).
-      for (; seen < scanner.records.length; seen++) {
-        accumulate(acc, scanner.records[seen]);
-      }
-    }
-    scanner.end();
-    for (; seen < scanner.records.length; seen++) {
-      accumulate(acc, scanner.records[seen]);
-    }
-    var rows = buildDaily(acc);
-    if (range === "6m") rows = filterLastNMonths(rows, 6);
-    return rows;
+    var count = 0;
+    var scanner = extractRecordsFromChunks({
+      onRecord: function (rec) {
+        count++;
+        accumulate(acc, rec);
+      },
+    });
+    return {
+      push: function (text) {
+        scanner.push(text);
+      },
+      get recordCount() {
+        return count;
+      },
+      finish: function (range) {
+        scanner.end();
+        var rows = buildDaily(acc);
+        if (range === "6m") rows = filterLastNMonths(rows, 6);
+        return rows;
+      },
+    };
+  }
+
+  // Convenience for tests: stream an array of text chunks and build the dataset.
+  // Returns the rows; use createStreamingParser directly when you need the count.
+  function parseXmlChunks(chunks, range) {
+    var parser = createStreamingParser();
+    for (var i = 0; i < chunks.length; i++) parser.push(chunks[i]);
+    return parser.finish(range);
   }
 
   var api = {
@@ -329,6 +374,7 @@
     buildDaily: buildDaily,
     filterLastNMonths: filterLastNMonths,
     parseXmlChunks: parseXmlChunks,
+    createStreamingParser: createStreamingParser,
   };
 
   if (typeof module !== "undefined" && module.exports) {

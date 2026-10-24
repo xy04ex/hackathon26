@@ -278,6 +278,10 @@
       msg =
         "That file doesn't look like an Apple Health export. Please pick the " +
         "<code>export.zip</code> from the Health app.";
+    } else if (reason === "no-records") {
+      msg =
+        "We read your export but didn't find any heart-rate, sleep, or " +
+        "breathing records in it. Nothing was saved.";
     } else {
       msg = "We couldn't finish reading that file. Please try again.";
     }

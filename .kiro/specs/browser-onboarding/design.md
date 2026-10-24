@@ -146,7 +146,7 @@ in-progress loop can bail between chunks.
 ```js
 { type: "progress", compressedRead: number, compressedTotal: number } // 2.x, 4.1
 { type: "done", rows: Daily_Record[] }                                 // 5.1
-{ type: "error", reason: "not-a-zip" | "no-export-xml" | "parse-failed" } // 2.6, 4.4–4.6
+{ type: "error", reason: "not-a-zip" | "no-export-xml" | "parse-failed" | "no-records" } // 2.6, 4.4–4.6
 ```
 
 `progress` reports bytes of the **compressed** export entry consumed (a stable,
@@ -242,8 +242,9 @@ Responsibilities (Requirement 2):
   (Requirements 2.2, 2.3).
 - Maintain the parse-core accumulator across chunks; check a `cancelled` flag
   between chunks so `{type:"cancel"}` stops promptly (Requirement 4.3).
-- On completion: build rows via `buildDaily`, apply `filterLastNMonths` when
-  `range === "6m"`, post `{type:"done", rows}`.
+- On completion: if `parser.recordCount === 0`, post `error: "no-records"` and
+  save nothing. Otherwise build rows via `buildDaily`, apply `filterLastNMonths`
+  when `range === "6m"`, post `{type:"done", rows}`.
 - Post `progress` with compressed bytes read as it goes.
 
 #### Decision 1 — Streaming unzip with no build step, no npm runtime dep
@@ -252,36 +253,46 @@ The `export.zip` is ~49 MB and its single large member decompresses to a much
 larger XML; we must never hold the whole decompressed XML in memory
 (Requirement 2.2, 2.3). Two realistic options:
 
-- **(a) Native `DecompressionStream('deflate-raw')`.** Apple's zip stores the
-  entry with raw DEFLATE. We read the local file header manually (signature
-  `PK\x03\x04`, compression method, compressed size, filename length, extra
-  length) to find the member and its byte range, then pipe the compressed bytes
-  through `DecompressionStream('deflate-raw')` → `TextDecoderStream` and read
-  chunks. Pure native, zero vendored code, truly streaming. Tradeoff: we hand-
-  parse just enough of the zip container; data-descriptor entries (sizes in a
-  trailing descriptor rather than the header) need the central directory read
-  from the end of the file, which adds code. Browser support for
-  `DecompressionStream` is good on current Chrome/Edge/Safari/Firefox but not on
-  older browsers.
-- **(b) Vendor a tiny static unzip helper** committed at
+- **(a) Vendor a tiny static unzip helper** committed at
   `js/vendor/fflate.min.js` and loaded with `importScripts` in the worker. The
   library is **fflate** (https://github.com/101arrowz/fflate), a pure-
   JavaScript, dependency-free compression/decompression library whose streaming
-  `Unzip` API processes the zip in chunks, handles the container quirks, and
-  gives us a chunked read callback. License: **MIT, Copyright (c) Arjun
-  Barrett**. Tradeoff: one committed third-party file to audit and attribute;
-  still no npm install to run the app.
+  `Unzip` API reads the **central directory**, so it handles the container
+  quirks and gives us a chunked read callback. License: **MIT, Copyright (c)
+  Arjun Barrett**. Tradeoff: one committed third-party file to audit and
+  attribute; still no npm install to run the app.
+- **(b) Native `DecompressionStream('deflate-raw')`.** Apple's zip stores the
+  entry with raw DEFLATE. We read the local file header manually (signature
+  `PK\x03\x04`, compression method, compressed size, filename length, extra
+  length) to find the member and its byte range, then pipe the compressed bytes
+  through `DecompressionStream('deflate-raw')` → streaming decode. Pure native,
+  zero vendored code. Tradeoff: it trusts the **local** file header's sizes,
+  which fails on data-descriptor entries (see below).
 
-**Recommendation for the hackathon: (b) vendor fflate as a static file**, used
-through a thin `openXmlStream(file)` adapter in the worker that exposes a chunk
-callback, with **(a) as the preferred path when `DecompressionStream('deflate-raw')`
-is available** (feature-detect; fall back to fflate for zip-container edge cases
-such as data-descriptor entries and for browsers lacking `DecompressionStream`).
-This keeps the happy path native and streaming while fflate covers container
-edge cases and older browsers. The committed file is `js/vendor/fflate.min.js`,
-loaded via `importScripts` in the worker; it is **not** an npm runtime
-dependency and the app still runs by serving static files. Both paths stream and
-never buffer the whole decompressed XML. (Supports Requirements 2.2, 2.4.)
+**Recommendation: (a) fflate's streaming `Unzip` is the PRIMARY unzip path.**
+Real iPhone exports store `export.xml` with general-purpose flag bit 3 set (a
+**data descriptor**): the local file header carries compressed size 0 and
+uncompressed size 0, and the true sizes live in the central directory at the end
+of the file. The native `DecompressionStream` happy path (option b) reads the
+local header to find the member's byte range, so on a real export it read 0
+bytes and **silently produced empty XML (0 days) with no error**. fflate reads
+the central directory, so data-descriptor entries work. Use native
+`DecompressionStream` only as an **optional optimization** for entries whose
+local header carries real sizes and no data descriptor; if there is any doubt,
+use fflate. The committed file is `js/vendor/fflate.min.js`, loaded via
+`importScripts`; it is **not** an npm runtime dependency and the app still runs
+by serving static files. (Supports Requirements 2.2, 2.4.)
+
+**Two streaming requirements proven essential on the real 49 MB / ~1 GB-
+decompressed export:**
+
+- **(i) Push compressed input in SLICES.** Feed the compressed bytes to fflate
+  in slices (e.g. 1 MB) rather than one buffer, or it inflates the whole member
+  at once and the memory guarantee is lost.
+- **(ii) Decode with a STREAMING `TextDecoder`.** Decode the decompressed bytes
+  with a streaming `TextDecoder` and feed each decoded text chunk straight into
+  the parser — **never build the decompressed XML into a single string**. A
+  ~1 GB string exceeds the JS maximum string length and throws.
 
 **Attribution requirement.** The MIT license notice MUST be preserved: keep the
 license header in the committed `js/vendor/fflate.min.js`, and add a
@@ -310,8 +321,10 @@ e.g.:
   the first `/>` (or `>` of a `</Record>` for the rare non-self-closing form)
   that is not inside a quoted attribute value. For each complete element, parse
   its attributes (`type`, `value`, `startDate`, `endDate`) with a small
-  attribute regex/scan and emit a lightweight record, then **drop** that text
-  from the buffer so memory stays flat (Requirement 2.3).
+  attribute regex/scan, **hand the record to an `onRecord` callback that folds
+  it into the accumulators immediately, and retain nothing** (an earlier version
+  kept every parsed record in an array and OOMed at ~1.5M records), then **drop**
+  that text from the buffer so memory stays flat (Requirement 2.3).
 - **Chunk-boundary handling:** if a `<Record` has started but its closing `/>`
   has not arrived yet, leave the partial element in `buffer` and wait for the
   next chunk — a Record split across two chunks is reassembled before it is
@@ -326,11 +339,17 @@ All functions are pure (no DOM, no Worker, no I/O) and mirror `parse_health.py`
 field-for-field.
 
 ```js
-// Incremental XML scanner. Returns a stateful scanner object.
-//   scanner.push(textChunk) -> void   (emits parsed raw records internally)
-//   scanner.records -> RawRecord[]     (accumulated so far)
+// Incremental XML scanner that folds each record immediately and retains
+// nothing (keeping records would OOM on multi-million-record exports).
+//   parser.push(textChunk) -> void   (scans Records, folds each via onRecord)
+//   parser.recordCount -> number      (count of records folded so far)
+//   parser.finish(range) -> Daily_Record[]  (builds + range-filters the rows)
 // RawRecord = { type, value?:string, startDate?:string, endDate?:string }
-extractRecordsFromChunks(): Scanner
+createStreamingParser(): StreamingParser
+
+// Lower-level scanner used by createStreamingParser; emits via onRecord.
+//   scanner.push(textChunk) -> void   (parses complete Records, calls onRecord)
+extractRecordsFromChunks(onRecord): Scanner
 
 // Parse an Apple timestamp "YYYY-MM-DD HH:MM:SS ±HHMM" to epoch ms + local date.
 // Mirrors Python strptime("%Y-%m-%d %H:%M:%S %z"); the local calendar date uses
@@ -365,6 +384,15 @@ Requirement 5.11 (field-for-field parity including 2-dp values), `round2` must
 replicate Python's behavior. The design mandates a `round2` that matches
 `parse_health.py`'s `round(x, 2)` on the fixture; the parity test is the gate
 that proves it. (Supports Requirements 5.2–5.4, 5.8, 5.11.)
+
+**Summation parity note.** CPython's `sum()` over floats uses compensated
+(Neumaier) summation since 3.12. A naive left-to-right fold of a day's metric
+values can land on the other side of a 2-dp rounding boundary (real case: three
+HRV values 55.3603, 42.9426, 33.8021 — naive fold rounds to 44.03, Python
+`sum()` to 44.04). `dailyMean` MUST replicate Python's compensated sum to stay
+byte-for-byte equal. Note `mergeIntervals` keeps a naive fold because
+`parse_health.py` accumulates sleep seconds with `+=` (not `sum()`), so matching
+Python there means not compensating. (Supports Requirements 5.2–5.4, 5.8, 5.11.)
 
 **Last-N-months semantics.** The window is measured from the **most recent
 record date in the dataset**, not today (Requirement 3.3), matching the idea
@@ -527,6 +555,7 @@ data; the sample path is purely in-memory for the session.
 | Bytes are not a readable zip | worker | post `error: "not-a-zip"`; no rows retained | 2.6, 4.4 |
 | Zip has no `export.xml` member | worker | post `error: "no-export-xml"`; no rows retained | 2.6, 4.5 |
 | Any mid-parse failure (bad inflate, scanner throw) | worker | post `error: "parse-failed"`; no rows retained | 4.6 |
+| Parse finished but `recordCount === 0` (e.g. empty XML) | worker | post `error: "no-records"`; never save an empty dataset | 2.6, 4.6 |
 | Worker crash / `onerror` | UI | treat as `parse-failed`; friendly message; return to picker | 4.6 |
 | User cancels | UI + worker | `worker.terminate()` + cooperative `cancel`; discard partial; return to picker | 4.3 |
 | Malformed individual record (bad timestamp/value) | parse-core | skip that record, continue — mirrors Python's `except (ValueError, TypeError)` | 5.11 |
@@ -535,8 +564,9 @@ data; the sample path is purely in-memory for the session.
 All UI-facing error copy is calm and non-judgemental: the not-a-zip and
 no-export-xml reasons both map to one friendly line that the file does not look
 like an Apple Health export, with the picker shown again (Requirements 4.4, 4.5).
-On every error path the UI discards partial data and never saves a dataset
-(Requirements 2.6, 4.6).
+The `no-records` reason maps to a friendly "we didn't find any records; nothing
+was saved" line, with the picker shown again. On every error path the UI
+discards partial data and never saves a dataset (Requirements 2.6, 4.6).
 
 ## Testing Strategy
 
@@ -562,6 +592,15 @@ and storage side-effects are covered by example/integration tests instead.
    `extractRecordsFromChunks` + `buildDaily` (+ `filterLastNMonths` for the range
    cases), and asserts deep equality with the expected rows, field-for-field
    including `null`s and 2-dp numbers.
+
+### Validation (real-export parity)
+
+Real-export parity was confirmed on a ~2.2M-record iPhone export producing 1556
+days, numerically equal to `scripts/parse_health.py` (JSON integer-valued floats
+like `78` vs `78.0` are equal in value — compare numerically, not as text). A
+committed **synthetic** data-descriptor zip fixture
+(`tests/fixtures/export-datadesc.zip`) plus the Neumaier compensated-sum
+edge-case guard these findings against regression.
 
 ### Property-based tests (fast-check + vitest, dev-only under `tests/`)
 
