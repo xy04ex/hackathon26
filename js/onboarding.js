@@ -110,6 +110,7 @@
     if (del)
       del.addEventListener("click", function () {
         deleteDataset();
+        root.HUIFAN_SAMPLE_CHOSEN = false;
         renderFirstRun(section);
         reRender();
       });
@@ -199,6 +200,9 @@
     }
     // Deliberately do NOT saveDataset and do NOT set window.HUIFAN_DAILY, so
     // pickDataSource falls through to the sample badge and nothing persists.
+    // The session flag tells the app a source has been chosen (so the pot
+    // lights and the sections appear).
+    root.HUIFAN_SAMPLE_CHOSEN = true;
     reRender();
     renderSampleBack(section);
   }
@@ -213,7 +217,9 @@
       '<button id="ob-own" class="btn btn--secondary">Use my own export</button>' +
       "</div>";
     section.querySelector("#ob-own").addEventListener("click", function () {
+      root.HUIFAN_SAMPLE_CHOSEN = false;
       renderFirstRun(section);
+      reRender();
     });
   }
 

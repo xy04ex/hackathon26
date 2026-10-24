@@ -88,9 +88,12 @@
       return { rows: real, source: "real" };
     }
     const sample = window.HUIFAN_SAMPLE_DAILY;
-    if (Array.isArray(sample) && sample.length > 0) {
+    if (window.HUIFAN_SAMPLE_CHOSEN && Array.isArray(sample) && sample.length > 0) {
       return { rows: sample, source: "sample" };
     }
+    // First run: data is loaded in the page but the user hasn't picked a source
+    // yet. Treat as "none" so the score card stays a cold, lidded pot and the
+    // tasks/patterns/insights sections stay hidden until they choose.
     return { rows: [], source: "none" };
   }
 
@@ -118,10 +121,19 @@
     const badge = renderDataBadge(source);
 
     if (rows.length === 0) {
+      // First run: no data source chosen yet. Show a cold, lidded pot (no
+      // flame, no score) and a calm prompt. The onboarding card above has the
+      // actual choices.
+      potState.scored = false;
+      potState.score = null;
+      potState.band = null;
+      todayScore = { date: null, score: null, tier: null, z: null };
+      tasks = [];
       section.innerHTML =
-        badge +
-        '<p class="muted">Upload your Apple Health export, or keep the ' +
-        "sample, to see a score.</p>";
+        '<div class="stove" id="pot-box"></div>' +
+        '<p class="muted score-prompt">Choose sample data or upload your own ' +
+        "Apple Health export to light the stove.</p>";
+      drawPot();
       return;
     }
 
@@ -849,6 +861,15 @@
     onTagClick();
   }
 
+  // Show/hide a whole card section (used to hide tasks/patterns/insights until
+  // the user has chosen a data source).
+  function setSectionVisible(id, visible) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = visible ? "" : "none";
+    if (!visible) el.innerHTML = "";
+  }
+
   // --- Boot -----------------------------------------------------------
   //
   // render() is the whole-page render. It is exposed as window.HuifanApp.render
@@ -858,6 +879,16 @@
     const { rows, source } = pickDataSource();
     recoveryContext.learnedDemotions = loadLearnedDemotions(source);
     renderScore(rows, source);
+
+    // First run (no source chosen): keep the app minimal — just the cold pot
+    // in the score card. Hide tasks, patterns and insights until the user
+    // picks sample data or uploads their own.
+    var hasSource = source === "real" || source === "sample";
+    setSectionVisible("tasks-section", hasSource);
+    setSectionVisible("patterns-section", hasSource);
+    setSectionVisible("insights-section", hasSource);
+    if (!hasSource) return;
+
     renderTasksSection();
     if (window.HuifanPatterns) {
       // Real data (uploaded/local) must not present the simulated table as the
