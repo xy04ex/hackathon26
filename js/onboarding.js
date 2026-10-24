@@ -37,17 +37,29 @@
     }
   }
 
+  // Delete EVERYTHING Huifan stored in this browser: every localStorage key
+  // under the "huifan." namespace (the health dataset huifan.daily.v1 AND the
+  // task history huifan.history.v1, plus any future huifan.* keys), then reset
+  // the in-memory globals. The UI promises "delete my data" means all of it.
+  function clearAllHuifanKeys() {
+    try {
+      var ls = root.localStorage;
+      var keys = [];
+      for (var i = 0; i < ls.length; i++) {
+        var k = ls.key(i);
+        if (k && k.indexOf("huifan.") === 0) keys.push(k);
+      }
+      keys.forEach(function (k) { ls.removeItem(k); });
+    } catch (e) {
+      /* storage unavailable — nothing persisted to clear */
+    }
+  }
+
   function deleteDataset() {
-    try {
-      root.localStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      /* ignore */
-    }
-    try {
-      root.HUIFAN_DAILY = null;
-    } catch (e) {
-      /* ignore */
-    }
+    clearAllHuifanKeys();
+    // Reset in-memory state so nothing lingers for the session.
+    try { root.HUIFAN_DAILY = null; } catch (e) { /* ignore */ }
+    try { root.HUIFAN_SAMPLE_CHOSEN = false; } catch (e) { /* ignore */ }
   }
 
   // Show the first-run screen only when neither the store nor the real global
@@ -109,8 +121,18 @@
     var del = section.querySelector("#ob-delete");
     if (del)
       del.addEventListener("click", function () {
+        var ok = true;
+        try {
+          ok = root.confirm(
+            "Delete all Huifan data from this browser?\n\n" +
+            "This removes your parsed health dataset AND your task-log history. " +
+            "This cannot be undone."
+          );
+        } catch (e) {
+          ok = true; // if confirm is unavailable, proceed (button intent is clear)
+        }
+        if (!ok) return;
         deleteDataset();
-        root.HUIFAN_SAMPLE_CHOSEN = false;
         renderFirstRun(section);
         reRender();
       });
@@ -372,6 +394,7 @@
     saveDataset: saveDataset,
     loadDataset: loadDataset,
     deleteDataset: deleteDataset,
+    clearAllHuifanKeys: clearAllHuifanKeys,
     mount: mount,
   };
 
