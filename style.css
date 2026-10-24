@@ -206,7 +206,10 @@ body {
   gap: 6px;
 }
 .task-type,
-.task-effort {
+.task-effort,
+.task-due {
+  -webkit-appearance: none;
+  appearance: none;
   padding: 5px 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
