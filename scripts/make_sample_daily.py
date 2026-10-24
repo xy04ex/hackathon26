@@ -18,7 +18,7 @@ import random
 from datetime import date, timedelta
 
 SEED = 42
-N_DAYS = 45  # enough for a 30-day baseline plus visible recent days
+N_DAYS = 200  # a 30-day baseline + many pairs for CV and insights
 
 # Personal baselines for a plausible young adult. These are the "usual" values
 # the synthetic person varies around — NOT medical reference ranges.
