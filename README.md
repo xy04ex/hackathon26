@@ -5,7 +5,7 @@
 烩饭 (huìfàn) is a one-pot rice dish: whatever you have, cooked together. Huifan takes the health data your watch already records and the tasks you already planned, and puts them together for today.
 
 - **Live demo:** https://huifan-recovery.netlify.app — choose **Try it with sample data** (no upload needed)
-- **Video (under 3 min):** _<YouTube link>_
+- **Video (under 3 min):** https://youtu.be/3cP623Igmng
 - **Track:** Hackachusetts — Healthcare & Biotech, H1: Turning wearable data into better healthcare
 - **Built by:** Yoyo Yang (solo), Boston University
 
