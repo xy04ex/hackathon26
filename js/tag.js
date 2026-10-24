@@ -147,6 +147,7 @@ function parseTasks(blob) {
     text,
     type: tagTaskType(text),
     effort: 2, // 1..3, user-editable; 2 = medium default
+    due: "later", // today | tomorrow | later; user-editable
   }));
 }
 

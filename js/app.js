@@ -4,6 +4,11 @@
 (function () {
   "use strict";
 
+  // Shared state. recoveryContext carries today's band + last night's sleep
+  // into the reorder step. learnedDemotions stays empty until the patterns
+  // page (task 6) proves a task type drops on low days.
+  let recoveryContext = { sleepHours: null, band: null, learnedDemotions: [] };
+
   // --- Data source selection ------------------------------------------
   //
   // Prefer the user's real data (window.HUIFAN_DAILY, written by the parser).
@@ -57,13 +62,21 @@
     const todayRow = rows[todayIndex];
     const result = window.HuifanScore.computeRecovery(rows, todayIndex);
 
+    // Sleep hours are known even when the baseline score isn't ready, so the
+    // short-sleep reorder rule can still fire.
+    recoveryContext.sleepHours =
+      typeof todayRow.sleep_h === "number" ? todayRow.sleep_h : null;
+
     if (!result.ok) {
+      recoveryContext.band = null;
       section.innerHTML =
         badge +
         '<p class="score-learning">Still learning your baseline. ' +
         "Need a week of data first.</p>";
       return;
     }
+
+    recoveryContext.band = result.band;
 
     section.innerHTML =
       badge +
@@ -116,12 +129,71 @@
       'placeholder="write lab report&#10;read chapter 4&#10;' +
       'reply to emails&#10;gym&#10;coffee with Sam"></textarea>' +
       '<button id="tag-btn" class="btn">Tag tasks</button>' +
-      '<ul id="task-list" class="task-list"></ul>';
+      '<ul id="task-list" class="task-list"></ul>' +
+      '<button id="reorder-btn" class="btn btn--secondary">' +
+      "Reorder for today</button>" +
+      '<div id="reorder-result" class="reorder-result"></div>';
 
     const tagBtn = section.querySelector("#tag-btn");
     tagBtn.addEventListener("click", onTagClick);
+    const reorderBtn = section.querySelector("#reorder-btn");
+    reorderBtn.addEventListener("click", onReorderClick);
 
     renderTaskList();
+  }
+
+  function onReorderClick() {
+    const target = document.getElementById("reorder-result");
+    if (!target) return;
+    if (tasks.length === 0) {
+      target.innerHTML =
+        '<p class="muted">Add and tag some tasks first.</p>';
+      return;
+    }
+    const result = window.HuifanOrder.reorderTasks(tasks, recoveryContext);
+    renderReordered(result, target);
+  }
+
+  function renderReordered(result, target) {
+    const items = result.ordered
+      .map(function (t) {
+        const moved = t.movedBy
+          ? '<span class="move-reason">' + escapeHtml(t.movedBy) + "</span>"
+          : "";
+        const chunk = t.chunk
+          ? '<span class="chunk-hint">' + escapeHtml(t.chunk) + "</span>"
+          : "";
+        return (
+          '<li class="ordered-item">' +
+          '<span class="ordered-text">' +
+          escapeHtml(t.text) +
+          "</span>" +
+          '<span class="ordered-tags">' +
+          '<span class="pill">' +
+          escapeHtml(t.type) +
+          "</span>" +
+          '<span class="pill">effort ' +
+          t.effort +
+          "</span>" +
+          '<span class="pill">due ' +
+          escapeHtml(t.due || "later") +
+          "</span>" +
+          "</span>" +
+          moved +
+          chunk +
+          "</li>"
+        );
+      })
+      .join("");
+
+    target.innerHTML =
+      '<h3 class="reorder-title">Your order for today</h3>' +
+      '<p class="reorder-note muted">' +
+      escapeHtml(result.notes) +
+      "</p>" +
+      '<ol class="ordered-list">' +
+      items +
+      "</ol>";
   }
 
   function onTagClick() {
@@ -157,6 +229,13 @@
             return '<option value="' + e + '"' + sel + ">" + e + "</option>";
           })
           .join("");
+        const dues = ["today", "tomorrow", "later"];
+        const dueOptions = dues
+          .map(function (d) {
+            const sel = d === (t.due || "later") ? " selected" : "";
+            return '<option value="' + d + '"' + sel + ">" + d + "</option>";
+          })
+          .join("");
         return (
           '<li class="task-item">' +
           '<span class="task-text">' +
@@ -172,6 +251,11 @@
           idx +
           '" aria-label="Effort 1 to 3">' +
           effortOptions +
+          "</select>" +
+          '<select class="task-due" data-idx="' +
+          idx +
+          '" aria-label="Due when">' +
+          dueOptions +
           "</select>" +
           "</span>" +
           "</li>"
@@ -190,6 +274,12 @@
       sel.addEventListener("change", function (e) {
         const i = Number(e.target.getAttribute("data-idx"));
         if (tasks[i]) tasks[i].effort = Number(e.target.value);
+      });
+    });
+    list.querySelectorAll(".task-due").forEach(function (sel) {
+      sel.addEventListener("change", function (e) {
+        const i = Number(e.target.getAttribute("data-idx"));
+        if (tasks[i]) tasks[i].due = e.target.value;
       });
     });
   }
