@@ -41,15 +41,27 @@
   // under the "huifan." namespace (the health dataset huifan.daily.v1 AND the
   // task history huifan.history.v1, plus any future huifan.* keys), then reset
   // the in-memory globals. The UI promises "delete my data" means all of it.
+  // Known Huifan keys, always removed even if the storage impl doesn't support
+  // key()/length enumeration. The namespace scan below also catches any other
+  // huifan.* keys in a real browser.
+  var KNOWN_HUIFAN_KEYS = ["huifan.daily.v1", "huifan.history.v1"];
+
   function clearAllHuifanKeys() {
     try {
       var ls = root.localStorage;
-      var keys = [];
-      for (var i = 0; i < ls.length; i++) {
-        var k = ls.key(i);
-        if (k && k.indexOf("huifan.") === 0) keys.push(k);
+      // 1) Namespace scan (real browsers): remove every huifan.* key.
+      if (ls && typeof ls.key === "function" && typeof ls.length === "number") {
+        var keys = [];
+        for (var i = 0; i < ls.length; i++) {
+          var k = ls.key(i);
+          if (k && k.indexOf("huifan.") === 0) keys.push(k);
+        }
+        keys.forEach(function (k) { ls.removeItem(k); });
       }
-      keys.forEach(function (k) { ls.removeItem(k); });
+      // 2) Belt-and-suspenders: always remove the known keys by name too.
+      KNOWN_HUIFAN_KEYS.forEach(function (k) {
+        try { ls.removeItem(k); } catch (e) { /* ignore */ }
+      });
     } catch (e) {
       /* storage unavailable — nothing persisted to clear */
     }
