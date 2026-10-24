@@ -258,3 +258,38 @@ body {
   color: var(--yellow);
   margin-top: 3px;
 }
+
+/* --- Evening check-in --- */
+.checkin-hint { margin: 0 0 10px; font-size: 0.82rem; }
+
+.checkin-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  margin-left: -1.4em; /* cancel the <ol> indent for tappable rows */
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  user-select: none;
+}
+.checkin-item:hover { border-color: var(--accent); }
+.checkin-item:focus-visible { outline: 2px solid var(--accent); }
+
+.checkbox {
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+.ordered-main { flex: 1 1 auto; }
+
+.ordered-item--done {
+  opacity: 0.6;
+}
+.ordered-item--done .checkbox { color: var(--green); }
+.ordered-item--done .ordered-text {
+  text-decoration: line-through;
+}

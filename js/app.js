@@ -9,6 +9,72 @@
   // page (task 6) proves a task type drops on low days.
   let recoveryContext = { sleepHours: null, band: null, learnedDemotions: [] };
 
+  // The full recovery result for today (score, tier, composite z) so check-in
+  // records can capture it. Set when the score renders.
+  let todayScore = { date: null, score: null, tier: null, z: null };
+
+  // The current reordered list being checked in (the display order).
+  let orderedTasks = [];
+
+  // --- localStorage history (wrapped so the app survives storage being off) --
+  const STORAGE_KEY = "huifan.history.v1";
+
+  function loadHistory() {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {}; // storage unavailable or corrupt — degrade gracefully
+    }
+  }
+
+  function saveHistory(history) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      return true;
+    } catch (e) {
+      return false; // private mode / disabled storage — app still works
+    }
+  }
+
+  /**
+   * Build one check-in record in the exact shape patterns.py will read.
+   * done defaults to false until the user taps.
+   */
+  function buildRecord(task, done) {
+    return {
+      date: todayScore.date,
+      task_text: task.text,
+      type: task.type,
+      effort: task.effort,
+      due: task.due || "later",
+      recovery_score: todayScore.score, // 0..100 or null
+      tier: todayScore.tier, // green|yellow|red or null
+      recovery_z: todayScore.z, // composite (pre-sigmoid) or null
+      done: !!done,
+    };
+  }
+
+  /** Persist today's records (array), keyed by date. Overwrites the day. */
+  function saveTodayRecords(records) {
+    const history = loadHistory();
+    history[todayScore.date || "unknown"] = records;
+    return saveHistory(history);
+  }
+
+  /** Flatten the whole history into one array for export / analysis. */
+  function flattenHistory() {
+    const history = loadHistory();
+    const out = [];
+    Object.keys(history)
+      .sort()
+      .forEach(function (date) {
+        const day = history[date];
+        if (Array.isArray(day)) out.push.apply(out, day);
+      });
+    return out;
+  }
+
   // --- Data source selection ------------------------------------------
   //
   // Prefer the user's real data (window.HUIFAN_DAILY, written by the parser).
@@ -67,8 +133,14 @@
     recoveryContext.sleepHours =
       typeof todayRow.sleep_h === "number" ? todayRow.sleep_h : null;
 
+    // Record today's date for check-in records regardless of score readiness.
+    todayScore.date = todayRow.date;
+
     if (!result.ok) {
       recoveryContext.band = null;
+      todayScore.score = null;
+      todayScore.tier = null;
+      todayScore.z = null;
       section.innerHTML =
         badge +
         '<p class="score-learning">Still learning your baseline. ' +
@@ -77,6 +149,9 @@
     }
 
     recoveryContext.band = result.band;
+    todayScore.score = result.score;
+    todayScore.tier = result.band;
+    todayScore.z = Math.round(result.composite * 10000) / 10000;
 
     section.innerHTML =
       badge +
@@ -155,16 +230,67 @@
   }
 
   function renderReordered(result, target) {
-    const items = result.ordered
-      .map(function (t) {
+    // Keep the display order as the check-in list. Carry over any done-state
+    // already saved for today so a reload doesn't lose taps.
+    const savedToday = loadHistory()[todayScore.date] || [];
+    const doneByText = {};
+    savedToday.forEach(function (r) {
+      doneByText[r.task_text] = r.done;
+    });
+
+    orderedTasks = result.ordered.map(function (t) {
+      return Object.assign({}, t, {
+        done: doneByText[t.text] === true,
+      });
+    });
+
+    target.innerHTML =
+      '<h3 class="reorder-title">Your order for today</h3>' +
+      '<p class="reorder-note muted">' +
+      escapeHtml(result.notes) +
+      "</p>" +
+      '<p class="checkin-hint muted">Tap a task to mark it done. ' +
+      "Saved automatically.</p>" +
+      '<ol id="checkin-list" class="ordered-list"></ol>' +
+      '<button id="export-btn" class="btn btn--secondary">' +
+      "Export history (JSON)</button>";
+
+    renderCheckinList();
+
+    const exportBtn = document.getElementById("export-btn");
+    if (exportBtn) exportBtn.addEventListener("click", onExportClick);
+
+    // Persist today's list immediately so a record exists even before taps.
+    persistToday();
+  }
+
+  function renderCheckinList() {
+    const list = document.getElementById("checkin-list");
+    if (!list) return;
+
+    list.innerHTML = orderedTasks
+      .map(function (t, idx) {
         const moved = t.movedBy
           ? '<span class="move-reason">' + escapeHtml(t.movedBy) + "</span>"
           : "";
         const chunk = t.chunk
           ? '<span class="chunk-hint">' + escapeHtml(t.chunk) + "</span>"
           : "";
+        const doneClass = t.done ? " ordered-item--done" : "";
+        const check = t.done ? "✓" : "○";
         return (
-          '<li class="ordered-item">' +
+          '<li class="ordered-item checkin-item' +
+          doneClass +
+          '" data-idx="' +
+          idx +
+          '" role="button" tabindex="0" ' +
+          'aria-pressed="' +
+          (t.done ? "true" : "false") +
+          '">' +
+          '<span class="checkbox">' +
+          check +
+          "</span>" +
+          '<span class="ordered-main">' +
           '<span class="ordered-text">' +
           escapeHtml(t.text) +
           "</span>" +
@@ -181,19 +307,53 @@
           "</span>" +
           moved +
           chunk +
+          "</span>" +
           "</li>"
         );
       })
       .join("");
 
-    target.innerHTML =
-      '<h3 class="reorder-title">Your order for today</h3>' +
-      '<p class="reorder-note muted">' +
-      escapeHtml(result.notes) +
-      "</p>" +
-      '<ol class="ordered-list">' +
-      items +
-      "</ol>";
+    // One tap toggles done. Keyboard (Enter/Space) works too for a11y.
+    list.querySelectorAll(".checkin-item").forEach(function (li) {
+      li.addEventListener("click", function () {
+        toggleDone(Number(li.getAttribute("data-idx")));
+      });
+      li.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleDone(Number(li.getAttribute("data-idx")));
+        }
+      });
+    });
+  }
+
+  function toggleDone(idx) {
+    if (!orderedTasks[idx]) return;
+    orderedTasks[idx].done = !orderedTasks[idx].done;
+    persistToday();
+    renderCheckinList();
+  }
+
+  function persistToday() {
+    const records = orderedTasks.map(function (t) {
+      return buildRecord(t, t.done);
+    });
+    saveTodayRecords(records);
+  }
+
+  function onExportClick() {
+    const all = flattenHistory();
+    const blob = new Blob([JSON.stringify(all, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "huifan-history.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   function onTagClick() {
