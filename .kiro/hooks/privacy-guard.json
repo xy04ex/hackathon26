@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Privacy guard: block personal/secret staged files",
+      "trigger": "Manual",
+      "description": "Manually triggered before committing. Fails if any personal health export or secret file is staged: export.zip, export.xml, anything under apple_health_export/, data/daily.json, data/daily.js, or .env (also catches data/insights.json/.js). Exits non-zero with the offending paths and how to unstage them. Checks the git index, not the working tree.",
+      "action": {
+        "type": "command",
+        "command": "staged=\"$(git diff --cached --name-only)\"; blocked=\"\"; while IFS= read -r f; do [ -z \"$f\" ] && continue; case \"$f\" in export.zip|export.xml|data/daily.json|data/daily.js|data/insights.json|data/insights.js|.env) blocked=\"$blocked  $f\\n\";; apple_health_export/*) blocked=\"$blocked  $f\\n\";; esac; done <<EOF\n$staged\nEOF\nif [ -n \"$blocked\" ]; then printf \"BLOCKED: personal/secret files are staged and must never be committed:\\n\"; printf \"$blocked\"; printf \"Unstage them with: git restore --staged <file>\\n\"; exit 1; fi; echo \"Privacy guard: no personal/secret files staged. OK.\"; exit 0",
+        "timeout": 30
+      }
+    }
+  ]
+}
