@@ -1,0 +1,8 @@
+# Real personal health data — never commit
+export.zip
+export.xml
+apple_health_export/
+data/daily.json
+
+.DS_Store
+__pycache__/
