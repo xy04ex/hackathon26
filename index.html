@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>烩饭 · Huifan</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>烩饭 <span class="latin">Huifan</span></h1>
+      <p class="tagline">Your recovery, turned into today's order.</p>
+    </header>
+
+    <!-- Recovery score (task 2) mounts here -->
+    <section id="score-section" class="card" aria-live="polite">
+      <p class="muted">Loading…</p>
+    </section>
+
+    <!-- Task input + reorder + check-in (tasks 3–5) mount here -->
+    <section id="tasks-section" class="card"></section>
+
+    <footer class="app-footer">
+      <p class="disclaimer">
+        Not medical advice. Huifan doesn't diagnose; clinical decisions stay with professionals.
+      </p>
+      <p class="privacy muted">Your health data stays on this device. No account, no server.</p>
+    </footer>
+  </main>
+
+  <!-- Pure logic modules load first, UI wiring last. -->
+  <script src="js/score.js"></script>
+  <script src="js/order.js"></script>
+  <script src="js/tag.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
