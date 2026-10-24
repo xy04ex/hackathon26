@@ -91,6 +91,10 @@ body {
   gap: var(--gap);
 }
 
+@media (min-width: 900px) {
+  .app { max-width: 960px; }
+}
+
 .app-header h1 {
   margin: 0;
   font-size: 2rem;
@@ -703,12 +707,13 @@ body {
 }
 .ob-left { min-width: 0; }
 
-/* 4 steps as equal tiles: 2x2 on phones (never 3+1), 4-in-a-row on wide. */
+/* 4 steps as equal tiles: always a 2x2 grid at every width. */
 .usp-tiles {
   list-style: none; margin: 16px 0 0; padding: 0;
   display: grid; gap: 8px; grid-template-columns: 1fr 1fr;
 }
-@media (min-width: 720px) { .usp-tiles { grid-template-columns: repeat(4, 1fr); } }
+/* Step tiles stay a 2x2 grid at every width (was 4-in-a-row on wide,
+   which made them thin strips in the narrow two-column layout). */
 .usp-tiles li {
   display: flex; flex-direction: column; gap: 6px;
   padding: 10px; border: 1px solid var(--line); border-radius: 10px;
