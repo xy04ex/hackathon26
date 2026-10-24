@@ -432,6 +432,13 @@
     renderTaskList();
   }
 
+  // Normalize task text for matching: trim and lowercase so "Write Essay " and
+  // "write essay" are the same task. Used ONLY to restore today's status by
+  // text — never by list position.
+  function normText(s) {
+    return String(s == null ? "" : s).trim().toLowerCase();
+  }
+
   function onTagClick() {
     const input = document.getElementById("task-input");
     if (!input) return;
@@ -439,16 +446,20 @@
       return Object.assign({}, t, { status: "pending" });
     });
     reordered = false;
-    // Carry over any status already saved for today (so a re-tag keeps taps).
+    // Restore today's done/skipped state by EXACT (trimmed, case-insensitive)
+    // task text within TODAY's records only — never by position. A task not in
+    // today's history starts "pending" (unticked).
     const savedToday = loadHistory()[todayScore.date] || [];
-    const byText = {};
-    savedToday.forEach(function (r) { byText[r.task_text] = r; });
-    // Also pull any tasks the user deferred yesterday into today's input is
-    // handled at boot (prefillDeferred); here we just restore status.
+    const statusByText = {};
+    savedToday.forEach(function (r) {
+      const key = normText(r.task_text);
+      // Prefer an explicit status; fall back to legacy `done` boolean.
+      const status = r.status || (typeof r.done === "boolean" ? (r.done ? "done" : "pending") : "pending");
+      statusByText[key] = status;
+    });
     tasks.forEach(function (t) {
-      const prev = byText[t.text];
-      if (prev && prev.status) t.status = prev.status;
-      else if (prev && typeof prev.done === "boolean") t.status = prev.done ? "done" : "pending";
+      const prev = statusByText[normText(t.text)];
+      t.status = prev || "pending";
     });
     setReorderNote("");
     renderTaskList();
