@@ -47,9 +47,6 @@
 
     mount.innerHTML =
       "<h2>Insights</h2>" +
-      (picked.source === "sample"
-        ? '<p class="data-badge data-badge--sample">Sample data — computed in your browser.</p>'
-        : "") +
       renderSlope(d) +
       renderSleepDebt(d.sleep_debt) +
       renderReference(d.reference) +

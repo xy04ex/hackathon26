@@ -104,7 +104,7 @@
     if (source === "sample") {
       return (
         '<p class="data-badge data-badge--sample">Sample data — ' +
-        "synthetic, for the demo. Run the parser to use your own.</p>"
+        "synthetic, for the demo. Upload your Apple Health export to use your own.</p>"
       );
     }
     return '<p class="data-badge data-badge--sample">No data loaded.</p>';
@@ -119,8 +119,8 @@
     if (rows.length === 0) {
       section.innerHTML =
         badge +
-        '<p class="muted">Add data/daily.js (run the parser) or keep the ' +
-        "sample to see a score.</p>";
+        '<p class="muted">Upload your Apple Health export, or keep the ' +
+        "sample, to see a score.</p>";
       return;
     }
 
