@@ -16,21 +16,31 @@ inclusion: always
 - Record types to extract:
   - `HKQuantityTypeIdentifierHeartRateVariabilitySDNN` (ms) → daily mean
   - `HKQuantityTypeIdentifierRestingHeartRate` (bpm) → daily value
+  - `HKQuantityTypeIdentifierRespiratoryRate` (breaths/min) → daily mean
   - `HKCategoryTypeIdentifierSleepAnalysis` → total asleep hours per night. Count asleep stages (`Asleep`, `AsleepCore`, `AsleepDeep`, `AsleepREM`, `AsleepUnspecified`), not `InBed` or `Awake`. Assign a night to the date the user woke up. Merge overlapping intervals from multiple sources so sleep is not double-counted.
-- Output: `data/daily.json` — a list of `{ "date": "YYYY-MM-DD", "hrv": number|null, "rhr": number|null, "sleep_h": number|null }`, sorted by date. Missing values are `null`, never 0.
+- Output: `data/daily.json` — a list of `{ "date": "YYYY-MM-DD", "hrv": number|null, "rhr": number|null, "resp": number|null, "sleep_h": number|null }`, sorted by date. Missing values are `null`, never 0.
 - **Real health exports must never be committed.** `export.zip`, `export.xml`, and real `daily.json` go in `.gitignore`. Commit a small synthetic `data/sample-daily.json` for the demo and for anyone cloning the repo.
 
-## Recovery score (deterministic, explainable)
-- Baseline: each metric's mean and standard deviation over the previous 30 days (excluding today). Need at least 7 days with data; otherwise show "still learning your baseline" instead of a score.
-- Per metric z-score vs baseline. HRV higher = better; resting HR lower = better (invert sign); sleep higher = better.
-- Combine into one 0–100 score (50 = a normal day for this user). Skip metrics that are missing today and re-weight the rest. Keep weights in one clearly named constant so they can be tuned.
+## Recovery score (deterministic, explainable — DO NOT reinvent)
+This is the user's real, working algorithm. Keep it exactly; put every number in a named constant.
+- Baseline: mean and **sample** SD (n−1) of the previous 30 days, **excluding today**.
+- z = (today − mean) / SD for HRV, resting HR, and respiratory rate.
+- Sleep is NOT baseline-compared: `sleep_z = (hours_asleep − 8) / 1`, clamped to [−3, +1.5].
+- `composite = 0.40·z_hrv − 0.25·z_rhr + 0.25·z_sleep − 0.10·z_resp`. If a metric is missing today, drop its term and keep the ratios among the present metrics (re-weight).
+- `score = round(100 / (1 + e^(−composite)))`.
+- Bands: **≥67 green, 34–66 yellow, ≤33 red**. Thresholds live in one constant.
+- Need at least 7 baseline days for the baseline-compared metrics; otherwise show "still learning your baseline" instead of a score.
 - Always produce a one-line reason naming the biggest contributor(s).
-- Bands: high / normal / low. Thresholds live in one constant.
 
-## Reordering
-- Input: the user's tasks, each with an effort level the user chooses (e.g. heavy / medium / light).
-- Output: the **same tasks**, reordered. Never add, remove, rename, or merge tasks.
-- Default rule: high recovery → heavy tasks first; low recovery → light tasks first, heavy tasks later; normal → keep the user's original order mostly intact. Ties keep the user's original order (stable sort).
+## Reordering (evidence-based defaults — DO NOT reinvent)
+- Input: the user's tasks, each with a **type** (deep work / reading / admin / physical / social) and optional **effort 1–3**. Optional due date (today / tomorrow / later).
+- Output: the **same tasks**, reordered. Never add, remove, rename, or merge tasks. Ties keep the user's original order (stable sort).
+- Default rules, in order:
+  1. Tasks due today or tomorrow always go first, regardless of score.
+  2. If sleep < 6 h: put one <10-minute task first, and split the most demanding task into 20–25 minute chunks.
+  3. Do NOT move cognitively demanding tasks later just because HRV is low (the HRV–cognition link is between-person, not within-person day to day).
+  4. Learned adjustment: only move a task type later on low-recovery days once the patterns page shows that type's completion actually drops on low days with a credible interval excluding no effect.
+- Show which rule moved each task.
 - Put the rule in one small pure function so it's easy to test and change.
 
 ## Code style
