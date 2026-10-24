@@ -4,5 +4,8 @@ export.xml
 apple_health_export/
 data/daily.json
 
+# Secrets — never commit
+.env
+
 .DS_Store
 __pycache__/
