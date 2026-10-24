@@ -263,7 +263,7 @@
     // Accessible, English description of the whole picture.
     var label = (scored ? HEAT[band] + ", recovery " + potState.score : open ? "not lit yet" : "nothing cooking yet") +
       (open ? "; " + ts.length + " task" + (ts.length === 1 ? "" : "s") + " in the pot, " + doneN + " done" : "");
-    var svg = sv("svg", { viewBox: "18 0 244 212", role: "img", "aria-label": label }, box);
+    var svg = sv("svg", { viewBox: "0 0 240 212", role: "img", "aria-label": label }, box);
 
     // steam = share of tasks done
     var wisps = open && doneN ? Math.max(1, Math.round(doneN / ts.length * 3)) : 0;
@@ -305,7 +305,7 @@
     // stove + flame (flame size = band)
     sv("rect", { "class": "stove-bar", x: 66, y: 169, width: 6, height: 29 }, svg);
     sv("rect", { "class": "stove-bar", x: 168, y: 169, width: 6, height: 29 }, svg);
-    sv("rect", { "class": "stove-bar", x: 40, y: 197, width: 216, height: 8, rx: 4 }, svg);
+    sv("rect", { "class": "stove-bar", x: 12, y: 197, width: 216, height: 8, rx: 4 }, svg);
     if (scored) {
       var n = FLAMES[band][0], h = FLAMES[band][1];
       for (var i = 0; i < n; i++) {
@@ -335,6 +335,43 @@
     popToppingIndex = null;
   }
 
+  // Topping positions for the finished bowl: centered on x=120 and constrained
+  // to the rim's safe inner width so the leftmost/rightmost are never clipped.
+  // Rows sit on the mound (higher rows are higher up and narrower).
+  function bowlSpots(n) {
+    var CX = 120;                 // bowl center x
+    var ROWS = [                  // [y, halfWidth] safe band per row
+      [96, 46],
+      [80, 34],
+      [66, 20],
+    ];
+    var r = n <= 7 ? 7 : n <= 14 ? 5.5 : 4.5;
+    // Distribute n toppings across rows, filling the widest (lowest) row first.
+    var caps = ROWS.map(function (row) {
+      return Math.max(1, Math.floor((2 * (row[1] - r)) / (2 * r + 3)) + 1);
+    });
+    var remaining = n, perRow = [0, 0, 0];
+    for (var ri = 0; ri < ROWS.length && remaining > 0; ri++) {
+      var take = Math.min(caps[ri], remaining);
+      perRow[ri] = take;
+      remaining -= take;
+    }
+    // If still remaining (very many tasks), pile the rest into the bottom row.
+    if (remaining > 0) perRow[0] += remaining;
+    var list = [];
+    ROWS.forEach(function (row, ri) {
+      var count = perRow[ri];
+      for (var j = 0; j < count; j++) {
+        var x = CX + (j - (count - 1) / 2) * (2 * r + 3);
+        // Clamp inside the row's safe half-width just in case.
+        var lo = CX - row[1] + r, hi = CX + row[1] - r;
+        if (x < lo) x = lo; else if (x > hi) x = hi;
+        list.push([x, row[0]]);
+      }
+    });
+    return { r: r, list: list };
+  }
+
   // The finished state: the pot has lifted off the stove and become a bowl.
   // Same rice, ONE coloured topping per completed task, steam rising, no stove
   // or flame. Message under the bowl depends on today's recovery band.
@@ -342,7 +379,7 @@
     var n = ts.length;
     var label = "All " + n + " task" + (n === 1 ? "" : "s") +
       " done — served up as a bowl" + (band ? " (" + HEAT[band] + " recovery day)" : "") + ".";
-    var svg = sv("svg", { viewBox: "18 0 244 212", role: "img", "aria-label": label, "class": "bowl-svg" }, box);
+    var svg = sv("svg", { viewBox: "0 0 240 212", role: "img", "aria-label": label, "class": "bowl-svg" }, box);
 
     // steam always rising over a finished bowl
     [100, 122, 144].forEach(function (x, i) {
@@ -350,16 +387,17 @@
       pth.style.animationDelay = (i * 0.8) + "s";
     });
 
-    // rice mound
+    // rice mound (centered on x=120)
     sv("path", { "class": "pot-rice", d: "M58 112 Q120 44 182 112 Z" }, svg);
 
-    // one coloured topping per completed task (uses the same spot layout)
-    var lay = spotsFor(n), tr = lay.r, tw = tr * 15 / 7, th = tr * 11 / 7;
-    ts.slice(0, lay.pts.length).forEach(function (t, i) {
-      var pp = lay.pts[i], dy = 15; // toppings sit a touch lower on the mound
+    // One coloured topping per completed task, laid out CENTERED on x=120 and
+    // kept well inside the bowl rim (inner opening ~62..178) so none is clipped.
+    var pts = bowlSpots(n);
+    var tr = pts.r, tw = tr * 15 / 7, th = tr * 11 / 7;
+    pts.list.forEach(function (pp, i) {
       var cls = "top f" + (i % 5 + 1);
-      if (i % 2) sv("rect", { "class": cls, x: pp[0] - tw / 2, y: pp[1] - th / 2 + dy, width: tw, height: th, rx: tr / 2, transform: "rotate(" + (i * 23 - 30) + " " + pp[0] + " " + (pp[1] + dy) + ")" }, svg);
-      else sv("circle", { "class": cls, cx: pp[0], cy: pp[1] + dy, r: tr }, svg);
+      if (i % 2) sv("rect", { "class": cls, x: pp[0] - tw / 2, y: pp[1] - th / 2, width: tw, height: th, rx: tr / 2, transform: "rotate(" + (i * 23 - 30) + " " + pp[0] + " " + pp[1] + ")" }, svg);
+      else sv("circle", { "class": cls, cx: pp[0], cy: pp[1], r: tr }, svg);
     });
 
     // bowl: a wide, shallow vessel (no stove, no flame)
