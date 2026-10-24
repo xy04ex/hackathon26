@@ -22,63 +22,70 @@
     const mount = document.getElementById(mountId);
     if (!mount) return;
     ctx = ctx || {};
-    const isReal = ctx.source === "real";
+    const isReal = ctx.source === "real" || ctx.source === "local";
     const loggedDays = ctx.loggedDays || 0;
-    const MIN_DAYS = 14; // days of logs before a personal analysis is meaningful
+    const MIN_DAYS = ctx.minDays || 14;
+    const own = ctx.ownAnalysis || null; // the user's OWN in-browser analysis
 
-    const data = window.HUIFAN_PATTERNS;
-    if (!data) {
+    const help =
+      '<p class="muted patterns-help">How often each kind of task actually ' +
+      "gets done, by recovery tier. Rates are shrunk toward the overall " +
+      "rate when a cell is thin, so small samples don't overclaim.</p>";
+
+    // REAL data with enough logged days: show the user's OWN table, computed
+    // in the browser from their logs. Demotable types come from their result.
+    if (isReal && own) {
+      const demotable = own.types
+        ? Object.keys(own.types).filter(function (t) { return own.types[t].drops_on_low; })
+        : [];
       mount.innerHTML =
         "<h2>Patterns</h2>" +
-        '<p class="muted">No patterns to show yet.</p>';
+        help +
+        '<p class="data-badge data-badge--real">Your own logs — ' +
+        loggedDays +
+        " logged day" + (loggedDays === 1 ? "" : "s") +
+        ", computed in your browser.</p>" +
+        renderTable(own) +
+        renderDemotable(demotable);
       return;
     }
 
-    // Banner: honest about whose data this is.
-    let banner;
+    const data = window.HUIFAN_PATTERNS;
+
+    // REAL data, not enough logged days yet: keep the honest demo message with
+    // the day count; do NOT claim any type drops for this user.
     if (isReal) {
       const remaining = Math.max(0, MIN_DAYS - loggedDays);
-      banner =
+      const banner =
         '<p class="sim-banner">This table is a <strong>demo of the method on ' +
         "simulated data</strong>, not your logs. Your own patterns appear once " +
         "you have enough logged days. So far you have logged <strong>" +
         loggedDays +
-        " day" +
-        (loggedDays === 1 ? "" : "s") +
-        "</strong>" +
-        (remaining > 0
-          ? " — about " + remaining + " more to go."
-          : " — enough to start building your own view.") +
+        " day" + (loggedDays === 1 ? "" : "s") + "</strong>" +
+        (remaining > 0 ? " — about " + remaining + " more to go." : " — enough to start building your own view.") +
         "</p>";
-    } else if (data.simulated) {
-      banner =
-        '<p class="sim-banner">Simulated data — ' +
-        data.n_records +
-        " records with a planted pattern, used to demo and validate the " +
-        "method. Not real logs.</p>";
-    } else {
-      banner =
-        '<p class="data-badge data-badge--real">Your real logs (' +
-        data.n_records +
-        " records).</p>";
+      mount.innerHTML =
+        "<h2>Patterns</h2>" + help + banner +
+        (data ? renderTable(data.analysis) + renderRecoveryTest(data.recovery_test) : "") +
+        '<p class="demotable muted">Your reorder keeps your own order until ' +
+        "your own logs show a type reliably drops on low days.</p>";
+      return;
     }
 
+    // SAMPLE (or no source): the committed simulated demo, full loop.
+    if (!data) {
+      mount.innerHTML = "<h2>Patterns</h2>" + '<p class="muted">No patterns to show yet.</p>';
+      return;
+    }
+    const banner = data.simulated
+      ? '<p class="sim-banner">Simulated data — ' + data.n_records +
+        " records with a planted pattern, used to demo and validate the method. Not real logs.</p>"
+      : '<p class="data-badge data-badge--real">Your real logs (' + data.n_records + " records).</p>";
     mount.innerHTML =
-      "<h2>Patterns</h2>" +
-      '<p class="muted patterns-help">How often each kind of task actually ' +
-      "gets done, by recovery tier. Rates are shrunk toward the overall " +
-      "rate (" +
-      pct(data.analysis.overall_rate) +
-      ") when a cell is thin, so small samples don't overclaim.</p>" +
-      banner +
+      "<h2>Patterns</h2>" + help + banner +
       renderTable(data.analysis) +
       renderRecoveryTest(data.recovery_test) +
-      // For real data the simulated demotions do NOT apply to the user, so we
-      // don't claim any type is "proven to drop" for them.
-      (isReal
-        ? '<p class="demotable muted">Your reorder keeps your own order until ' +
-          "your own logs show a type reliably drops on low days.</p>"
-        : renderDemotable(data.demotable_types));
+      renderDemotable(data.demotable_types);
   }
 
   function renderTable(analysis) {

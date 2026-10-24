@@ -36,10 +36,10 @@ window.HUIFAN_PATTERNS = {
           }
         },
         "green_minus_red": {
-          "diff_mean": -0.0005,
-          "diff_ci_low": -0.1216,
-          "diff_ci_high": 0.1243,
-          "prob_green_higher": 0.4911,
+          "diff_mean": -0.0007,
+          "diff_ci_low": -0.12,
+          "diff_ci_high": 0.123,
+          "prob_green_higher": 0.4867,
           "drops": false
         },
         "drops_on_low": false
@@ -72,9 +72,9 @@ window.HUIFAN_PATTERNS = {
           }
         },
         "green_minus_red": {
-          "diff_mean": 0.4133,
-          "diff_ci_low": 0.2813,
-          "diff_ci_high": 0.5392,
+          "diff_mean": 0.4134,
+          "diff_ci_low": 0.282,
+          "diff_ci_high": 0.54,
           "prob_green_higher": 1.0,
           "drops": true
         },
@@ -108,10 +108,10 @@ window.HUIFAN_PATTERNS = {
           }
         },
         "green_minus_red": {
-          "diff_mean": 0.0477,
-          "diff_ci_low": -0.0887,
-          "diff_ci_high": 0.1845,
-          "prob_green_higher": 0.7455,
+          "diff_mean": 0.048,
+          "diff_ci_low": -0.088,
+          "diff_ci_high": 0.185,
+          "prob_green_higher": 0.7415,
           "drops": false
         },
         "drops_on_low": false
@@ -144,10 +144,10 @@ window.HUIFAN_PATTERNS = {
           }
         },
         "green_minus_red": {
-          "diff_mean": 0.0043,
-          "diff_ci_low": -0.1155,
+          "diff_mean": 0.0047,
+          "diff_ci_low": -0.116,
           "diff_ci_high": 0.131,
-          "prob_green_higher": 0.5141,
+          "prob_green_higher": 0.5189,
           "drops": false
         },
         "drops_on_low": false
@@ -180,10 +180,10 @@ window.HUIFAN_PATTERNS = {
           }
         },
         "green_minus_red": {
-          "diff_mean": -0.0678,
-          "diff_ci_low": -0.1899,
-          "diff_ci_high": 0.0604,
-          "prob_green_higher": 0.1552,
+          "diff_mean": -0.0677,
+          "diff_ci_low": -0.189,
+          "diff_ci_high": 0.059,
+          "prob_green_higher": 0.1512,
           "drops": false
         },
         "drops_on_low": false

@@ -1,0 +1,212 @@
+{
+  "simulated": true,
+  "n_records": 1588,
+  "source": "simulated-logs.json",
+  "analysis": {
+    "overall_rate": 0.7191,
+    "prior_strength": 8.0,
+    "ci_mass": 0.94,
+    "types": {
+      "admin": {
+        "tiers": {
+          "green": {
+            "n": 111,
+            "done": 83,
+            "raw_rate": 0.7477,
+            "estimate": 0.7458,
+            "ci_low": 0.6677,
+            "ci_high": 0.8169
+          },
+          "yellow": {
+            "n": 157,
+            "done": 116,
+            "raw_rate": 0.7389,
+            "estimate": 0.7379,
+            "ci_low": 0.6714,
+            "ci_high": 0.7996
+          },
+          "red": {
+            "n": 64,
+            "done": 48,
+            "raw_rate": 0.75,
+            "estimate": 0.7466,
+            "ci_low": 0.6454,
+            "ci_high": 0.8362
+          }
+        },
+        "green_minus_red": {
+          "diff_mean": -0.0007,
+          "diff_ci_low": -0.12,
+          "diff_ci_high": 0.123,
+          "prob_green_higher": 0.4867,
+          "drops": false
+        },
+        "drops_on_low": false
+      },
+      "deep work": {
+        "tiers": {
+          "green": {
+            "n": 106,
+            "done": 92,
+            "raw_rate": 0.8679,
+            "estimate": 0.8575,
+            "ci_low": 0.7912,
+            "ci_high": 0.9132
+          },
+          "yellow": {
+            "n": 151,
+            "done": 110,
+            "raw_rate": 0.7285,
+            "estimate": 0.728,
+            "ci_low": 0.6595,
+            "ci_high": 0.7916
+          },
+          "red": {
+            "n": 59,
+            "done": 24,
+            "raw_rate": 0.4068,
+            "estimate": 0.4441,
+            "ci_low": 0.3324,
+            "ci_high": 0.5586
+          }
+        },
+        "green_minus_red": {
+          "diff_mean": 0.4134,
+          "diff_ci_low": 0.282,
+          "diff_ci_high": 0.54,
+          "prob_green_higher": 1.0,
+          "drops": true
+        },
+        "drops_on_low": true
+      },
+      "physical": {
+        "tiers": {
+          "green": {
+            "n": 107,
+            "done": 70,
+            "raw_rate": 0.6542,
+            "estimate": 0.6587,
+            "ci_low": 0.5737,
+            "ci_high": 0.7391
+          },
+          "yellow": {
+            "n": 149,
+            "done": 97,
+            "raw_rate": 0.651,
+            "estimate": 0.6545,
+            "ci_low": 0.5817,
+            "ci_high": 0.7239
+          },
+          "red": {
+            "n": 62,
+            "done": 37,
+            "raw_rate": 0.5968,
+            "estimate": 0.6108,
+            "ci_low": 0.4995,
+            "ci_high": 0.7167
+          }
+        },
+        "green_minus_red": {
+          "diff_mean": 0.048,
+          "diff_ci_low": -0.088,
+          "diff_ci_high": 0.185,
+          "prob_green_higher": 0.7415,
+          "drops": false
+        },
+        "drops_on_low": false
+      },
+      "reading": {
+        "tiers": {
+          "green": {
+            "n": 109,
+            "done": 83,
+            "raw_rate": 0.7615,
+            "estimate": 0.7586,
+            "ci_low": 0.6809,
+            "ci_high": 0.8288
+          },
+          "yellow": {
+            "n": 144,
+            "done": 101,
+            "raw_rate": 0.7014,
+            "estimate": 0.7023,
+            "ci_low": 0.6306,
+            "ci_high": 0.7695
+          },
+          "red": {
+            "n": 58,
+            "done": 44,
+            "raw_rate": 0.7586,
+            "estimate": 0.7538,
+            "ci_low": 0.6487,
+            "ci_high": 0.8459
+          }
+        },
+        "green_minus_red": {
+          "diff_mean": 0.0047,
+          "diff_ci_low": -0.116,
+          "diff_ci_high": 0.131,
+          "prob_green_higher": 0.5189,
+          "drops": false
+        },
+        "drops_on_low": false
+      },
+      "social": {
+        "tiers": {
+          "green": {
+            "n": 108,
+            "done": 76,
+            "raw_rate": 0.7037,
+            "estimate": 0.7048,
+            "ci_low": 0.6226,
+            "ci_high": 0.7809
+          },
+          "yellow": {
+            "n": 144,
+            "done": 115,
+            "raw_rate": 0.7986,
+            "estimate": 0.7944,
+            "ci_low": 0.7298,
+            "ci_high": 0.8525
+          },
+          "red": {
+            "n": 59,
+            "done": 46,
+            "raw_rate": 0.7797,
+            "estimate": 0.7724,
+            "ci_low": 0.6704,
+            "ci_high": 0.8607
+          }
+        },
+        "green_minus_red": {
+          "diff_mean": -0.0677,
+          "diff_ci_low": -0.189,
+          "diff_ci_high": 0.059,
+          "prob_green_higher": 0.1512,
+          "drops": false
+        },
+        "drops_on_low": false
+      }
+    }
+  },
+  "recovery_test": {
+    "all_pass": true,
+    "checks": [
+      {
+        "name": "deep work drops on low days",
+        "expected": true,
+        "observed": true,
+        "pass": true
+      },
+      {
+        "name": "reading does NOT drop on low days",
+        "expected": true,
+        "observed": true,
+        "pass": true
+      }
+    ]
+  },
+  "demotable_types": [
+    "deep work"
+  ]
+}
