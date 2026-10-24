@@ -180,7 +180,7 @@
   // flame height = recovery band, score number on the pot, toppings = today's
   // tasks (coloured when done, raw/dashed when not), steam = share of tasks
   // done, lid on until a task list is in. All Chinese labels are translated.
-  var potState = { scored: false, score: null, band: null };
+  var potState = { scored: false, score: null, band: null, celebrated: false };
 
   var SVGNS = "http://www.w3.org/2000/svg";
   // Band codes: g = green/High, m = yellow/Medium, r = red/Low heat.
@@ -230,6 +230,17 @@
       .map(function (t) { return { done: t.status === "done" }; });
   }
 
+  // Band-specific message shown under the finished bowl.
+  var DONE_MESSAGE = {
+    red: "All done on a low-recovery day. Go easy tonight.",
+    yellow: "All done. Rest is part of the plan.",
+    green: "All done. Good day to bank some recovery.",
+  };
+
+  // Index of a topping that was just ticked, so drawPot can pop it with a
+  // bounce exactly once. Cleared after the next draw.
+  var popToppingIndex = null;
+
   function drawPot() {
     var box = document.getElementById("pot-box");
     if (!box) return;
@@ -241,6 +252,13 @@
     var ts = potTasks();
     var doneN = ts.filter(function (t) { return t.done; }).length;
     var open = ts.length > 0;
+    var allDone = open && doneN === ts.length;
+
+    if (allDone) {
+      drawBowl(box, ts, band);
+      popToppingIndex = null;
+      return;
+    }
 
     // Accessible, English description of the whole picture.
     var label = (scored ? HEAT[band] + ", recovery " + potState.score : open ? "not lit yet" : "nothing cooking yet") +
@@ -260,6 +278,7 @@
       var lay = spotsFor(ts.length), tr = lay.r, tw = tr * 15 / 7, th = tr * 11 / 7;
       ts.slice(0, lay.pts.length).forEach(function (t, i) {
         var pp = lay.pts[i], cls = "top " + (t.done ? "f" + (i % 5 + 1) : "raw");
+        if (t.done && popToppingIndex === i) cls += " top-pop";
         if (i % 2) sv("rect", { "class": cls, x: pp[0] - tw / 2, y: pp[1] - th / 2, width: tw, height: th, rx: tr / 2, transform: "rotate(" + (i * 23 - 30) + " " + pp[0] + " " + pp[1] + ")" }, svg);
         else sv("circle", { "class": cls, cx: pp[0], cy: pp[1], r: tr }, svg);
       });
@@ -309,9 +328,56 @@
     if (open) {
       var n2 = document.createElement("span");
       n2.className = "heat-n";
-      n2.textContent = doneN === ts.length ? "all done — serve it up" : ts.length + " in the pot · " + doneN + " done";
+      n2.textContent = ts.length + " in the pot \u00B7 " + doneN + " done";
       cap.appendChild(n2);
     }
+    box.appendChild(cap);
+    popToppingIndex = null;
+  }
+
+  // The finished state: the pot has lifted off the stove and become a bowl.
+  // Same rice, ONE coloured topping per completed task, steam rising, no stove
+  // or flame. Message under the bowl depends on today's recovery band.
+  function drawBowl(box, ts, band) {
+    var n = ts.length;
+    var label = "All " + n + " task" + (n === 1 ? "" : "s") +
+      " done — served up as a bowl" + (band ? " (" + HEAT[band] + " recovery day)" : "") + ".";
+    var svg = sv("svg", { viewBox: "18 0 244 212", role: "img", "aria-label": label, "class": "bowl-svg" }, box);
+
+    // steam always rising over a finished bowl
+    [100, 122, 144].forEach(function (x, i) {
+      var pth = sv("path", { "class": "st", d: "M" + x + " 44 q-7 -8 0 -16 q7 -8 0 -16" }, svg);
+      pth.style.animationDelay = (i * 0.8) + "s";
+    });
+
+    // rice mound
+    sv("path", { "class": "pot-rice", d: "M58 112 Q120 44 182 112 Z" }, svg);
+
+    // one coloured topping per completed task (uses the same spot layout)
+    var lay = spotsFor(n), tr = lay.r, tw = tr * 15 / 7, th = tr * 11 / 7;
+    ts.slice(0, lay.pts.length).forEach(function (t, i) {
+      var pp = lay.pts[i], dy = 15; // toppings sit a touch lower on the mound
+      var cls = "top f" + (i % 5 + 1);
+      if (i % 2) sv("rect", { "class": cls, x: pp[0] - tw / 2, y: pp[1] - th / 2 + dy, width: tw, height: th, rx: tr / 2, transform: "rotate(" + (i * 23 - 30) + " " + pp[0] + " " + (pp[1] + dy) + ")" }, svg);
+      else sv("circle", { "class": cls, cx: pp[0], cy: pp[1] + dy, r: tr }, svg);
+    });
+
+    // bowl: a wide, shallow vessel (no stove, no flame)
+    sv("path", { "class": "pot-body", d: "M48 112 L192 112 Q188 170 120 176 Q52 170 48 112 Z" }, svg);
+    sv("rect", { "class": "pot-rim", x: 40, y: 104, width: 160, height: 13, rx: 6.5 }, svg);
+    // bowl foot
+    sv("path", { "class": "pot-rim", d: "M96 176 Q120 184 144 176 L140 186 Q120 192 100 186 Z" }, svg);
+    [[72, 130], [92, 150], [120, 160], [150, 150], [168, 132], [110, 158], [134, 158]].forEach(function (pp, i) {
+      sv("circle", { "class": "pot-spk", cx: pp[0], cy: pp[1], r: i % 3 ? 1.3 : 2 }, svg);
+    });
+
+    // caption: band-specific completion message under the bowl
+    var cap = document.createElement("div");
+    cap.className = "heat bowl-done";
+    var msg = document.createElement("p");
+    msg.className = "done-message";
+    msg.textContent = DONE_MESSAGE[band] || "All done.";
+    cap.appendChild(msg);
     box.appendChild(cap);
   }
 
@@ -518,10 +584,106 @@
   function toggleDone(idx) {
     const t = tasks[idx];
     if (!t || t.status === "skipped") return;
-    t.status = t.status === "done" ? "pending" : "done";
+
+    // Were all non-skipped tasks already done before this tick?
+    const wasAllDone = isAllDone();
+    const turningOn = t.status !== "done";
+    t.status = turningOn ? "done" : "pending";
+
+    // If we just ticked a task on, pop its topping (index within the
+    // non-skipped list, matching potTasks()/drawPot ordering).
+    if (turningOn) {
+      popToppingIndex = nonSkippedIndexOf(idx);
+    } else {
+      popToppingIndex = null;
+    }
+
     persistToday();
     renderTaskList();
     drawPot();
+
+    // Fire the completion reward only on the transition into all-done.
+    const nowAllDone = isAllDone();
+    if (nowAllDone && !wasAllDone) {
+      potState.celebrated = true;
+      celebrate();
+    } else if (!nowAllDone) {
+      potState.celebrated = false; // unticking puts the pot back; allow re-fire
+    }
+  }
+
+  // True when there is at least one non-skipped task and all of them are done.
+  function isAllDone() {
+    const active = (tasks || []).filter(function (t) { return t.status !== "skipped"; });
+    return active.length > 0 && active.every(function (t) { return t.status === "done"; });
+  }
+
+  // Map a `tasks` index to its position among non-skipped tasks (the order the
+  // pot/bowl toppings are drawn in).
+  function nonSkippedIndexOf(idx) {
+    var k = -1;
+    for (var i = 0; i <= idx && i < tasks.length; i++) {
+      if (tasks[i].status !== "skipped") k++;
+    }
+    return k;
+  }
+
+  var prefersReducedMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Completion reward: a short full-screen confetti burst, then a smooth
+  // scroll up to the bowl. Respects prefers-reduced-motion (then: no confetti,
+  // no scroll animation — the bowl + message are already drawn by drawPot).
+  function celebrate() {
+    if (prefersReducedMotion) {
+      scrollToPot(false);
+      return;
+    }
+    fireConfetti();
+    scrollToPot(true);
+  }
+
+  function scrollToPot(smooth) {
+    var box = document.getElementById("pot-box");
+    if (!box || typeof box.scrollIntoView !== "function") return;
+    try {
+      box.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" });
+    } catch (e) {
+      box.scrollIntoView();
+    }
+  }
+
+  // Pure JS/CSS confetti: a fixed overlay with short-lived falling pieces that
+  // removes itself. No library.
+  function fireConfetti() {
+    var overlay = document.createElement("div");
+    overlay.className = "confetti-overlay";
+    overlay.setAttribute("aria-hidden", "true");
+    var colors = ["#E2571C", "#F7B32B", "#3E9B4F", "#1D4AA0", "#E77B6E", "#E8892B"];
+    var N = 90;
+    for (var i = 0; i < N; i++) {
+      var piece = document.createElement("span");
+      piece.className = "confetti-piece";
+      var left = Math.random() * 100;
+      var delay = Math.random() * 0.25;
+      var dur = 1.4 + Math.random() * 1.1;
+      var rot = Math.floor(Math.random() * 360);
+      var drift = (Math.random() * 2 - 1) * 60;
+      piece.style.left = left + "vw";
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDelay = delay + "s";
+      piece.style.animationDuration = dur + "s";
+      piece.style.setProperty("--rot", rot + "deg");
+      piece.style.setProperty("--drift", drift + "px");
+      if (i % 3 === 0) piece.style.borderRadius = "50%"; // mix circles + rects
+      overlay.appendChild(piece);
+    }
+    document.body.appendChild(overlay);
+    // Remove after the longest piece finishes.
+    window.setTimeout(function () {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 3000);
   }
 
   // "Not today": skip the task — it leaves today's order, logs as "skipped",
