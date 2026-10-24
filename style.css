@@ -577,3 +577,43 @@ body {
 @media (max-width: 420px) {
   .usp-strip li { min-width: 0; flex-basis: calc(50% - 8px); }
 }
+
+/* --- Collapsible cards (Patterns, Insights) --------------------------- */
+.card-collapse { }
+.card-summary {
+  list-style: none;              /* hide default marker; we draw our own caret */
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 2px 0;
+}
+.card-summary::-webkit-details-marker { display: none; }
+.card-summary::before {
+  content: "\25B8";              /* ▸ right-pointing caret when collapsed */
+  color: var(--ink3);
+  font-size: 0.8em;
+  transition: transform 0.15s ease;
+  align-self: center;
+}
+.card-collapse[open] > .card-summary::before { transform: rotate(90deg); }
+.card-summary-title {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  color: var(--ink);
+}
+.card-summary-take {
+  font-size: 0.88rem;
+  color: var(--ink2);
+}
+.card-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.card-body { margin-top: 12px; }
+.card-body > h2 { display: none; }  /* summary is the header; drop any inner h2 */
+@media (prefers-reduced-motion: reduce) {
+  .card-summary::before { transition: none; }
+}

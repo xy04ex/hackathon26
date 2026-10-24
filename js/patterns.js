@@ -9,6 +9,11 @@
 
   const TIERS = ["green", "yellow", "red"];
 
+  function esc(x) {
+    return String(x == null ? "" : x)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
   function pct(x) {
     return x === null || x === undefined ? "—" : Math.round(x * 100) + "%";
   }
@@ -18,6 +23,33 @@
   // present it as the user's own. We show the table as a labelled demo of the
   // method and tell the user their own patterns appear after enough logged
   // days (showing how many they have so far).
+  // One-sentence takeaway from an analysis: name the type(s) that drop on low
+  // days, or say nothing reliably does yet.
+  function patternsTakeaway(analysis, demotable) {
+    if (!analysis) return "Log a few days to see your patterns.";
+    var dem = demotable || (analysis.types
+      ? Object.keys(analysis.types).filter(function (t) { return analysis.types[t].drops_on_low; })
+      : []);
+    if (dem.length === 0) return "No task type reliably drops on your low days yet.";
+    var cap = dem[0].charAt(0).toUpperCase() + dem[0].slice(1);
+    if (dem.length === 1) return cap + " drops on your low days.";
+    return cap + " and " + (dem.length - 1) + " more drop on your low days.";
+  }
+
+  // Wrap a card body in a collapsed <details> with a summary takeaway.
+  // Native disclosure => keyboard accessible (Enter/Space toggles) for free.
+  function collapsibleCard(title, takeaway, bodyHtml) {
+    return (
+      '<details class="card-collapse">' +
+      '<summary class="card-summary">' +
+      '<span class="card-summary-title">' + esc(title) + "</span>" +
+      '<span class="card-summary-take">' + esc(takeaway) + "</span>" +
+      "</summary>" +
+      '<div class="card-body">' + bodyHtml + "</div>" +
+      "</details>"
+    );
+  }
+
   function renderPatterns(mountId, ctx) {
     const mount = document.getElementById(mountId);
     if (!mount) return;
@@ -32,60 +64,52 @@
       "gets done, by recovery tier. Rates are shrunk toward the overall " +
       "rate when a cell is thin, so small samples don't overclaim.</p>";
 
-    // REAL data with enough logged days: show the user's OWN table, computed
-    // in the browser from their logs. Demotable types come from their result.
+    const data = window.HUIFAN_PATTERNS;
+    let body, takeaway;
+
     if (isReal && own) {
+      // REAL data with enough logged days: the user's OWN table.
       const demotable = own.types
         ? Object.keys(own.types).filter(function (t) { return own.types[t].drops_on_low; })
         : [];
-      mount.innerHTML =
-        "<h2>Patterns</h2>" +
+      body =
         help +
         '<p class="data-badge data-badge--real">Your own logs — ' +
-        loggedDays +
-        " logged day" + (loggedDays === 1 ? "" : "s") +
+        loggedDays + " logged day" + (loggedDays === 1 ? "" : "s") +
         ", computed in your browser.</p>" +
-        renderTable(own) +
-        renderDemotable(demotable);
-      return;
-    }
-
-    const data = window.HUIFAN_PATTERNS;
-
-    // REAL data, not enough logged days yet: keep the honest demo message with
-    // the day count; do NOT claim any type drops for this user.
-    if (isReal) {
+        renderTable(own) + renderDemotable(demotable);
+      takeaway = patternsTakeaway(own, demotable);
+    } else if (isReal) {
+      // REAL data, not enough logged days yet: honest demo message.
       const remaining = Math.max(0, MIN_DAYS - loggedDays);
       const banner =
         '<p class="sim-banner">This table is a <strong>demo of the method on ' +
         "simulated data</strong>, not your logs. Your own patterns appear once " +
         "you have enough logged days. So far you have logged <strong>" +
-        loggedDays +
-        " day" + (loggedDays === 1 ? "" : "s") + "</strong>" +
+        loggedDays + " day" + (loggedDays === 1 ? "" : "s") + "</strong>" +
         (remaining > 0 ? " — about " + remaining + " more to go." : " — enough to start building your own view.") +
         "</p>";
-      mount.innerHTML =
-        "<h2>Patterns</h2>" + help + banner +
+      body =
+        help + banner +
         (data ? renderTable(data.analysis) + renderRecoveryTest(data.recovery_test) : "") +
         '<p class="demotable muted">Your reorder keeps your own order until ' +
         "your own logs show a type reliably drops on low days.</p>";
-      return;
+      takeaway = "Your own patterns appear after " + MIN_DAYS + " logged days (" + loggedDays + " so far).";
+    } else if (!data) {
+      body = '<p class="muted">No patterns to show yet.</p>';
+      takeaway = "Log a few days to see your patterns.";
+    } else {
+      // SAMPLE (or no source): the committed simulated demo, full loop.
+      const banner = data.simulated
+        ? '<p class="sim-banner">Simulated data — ' + data.n_records +
+          " records with a planted pattern, used to demo and validate the method. Not real logs.</p>"
+        : '<p class="data-badge data-badge--real">Your real logs (' + data.n_records + " records).</p>";
+      body = help + banner + renderTable(data.analysis) +
+        renderRecoveryTest(data.recovery_test) + renderDemotable(data.demotable_types);
+      takeaway = patternsTakeaway(data.analysis, data.demotable_types);
     }
 
-    // SAMPLE (or no source): the committed simulated demo, full loop.
-    if (!data) {
-      mount.innerHTML = "<h2>Patterns</h2>" + '<p class="muted">No patterns to show yet.</p>';
-      return;
-    }
-    const banner = data.simulated
-      ? '<p class="sim-banner">Simulated data — ' + data.n_records +
-        " records with a planted pattern, used to demo and validate the method. Not real logs.</p>"
-      : '<p class="data-badge data-badge--real">Your real logs (' + data.n_records + " records).</p>";
-    mount.innerHTML =
-      "<h2>Patterns</h2>" + help + banner +
-      renderTable(data.analysis) +
-      renderRecoveryTest(data.recovery_test) +
-      renderDemotable(data.demotable_types);
+    mount.innerHTML = collapsibleCard("Patterns", takeaway, body);
   }
 
   function renderTable(analysis) {

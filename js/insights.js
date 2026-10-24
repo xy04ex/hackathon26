@@ -36,21 +36,47 @@
     var picked = activeRows();
 
     if (!core || picked.rows.length === 0) {
-      mount.innerHTML =
-        "<h2>Insights</h2>" +
+      mount.innerHTML = collapsibleCard(
+        "Insights",
+        "Load your data or try the sample to see your insights.",
         '<p class="muted">Load your data (or try the sample) to see insights ' +
-        "computed right here in your browser.</p>";
+          "computed right here in your browser.</p>"
+      );
       return;
     }
 
     var d = core.computeInsights(picked.rows, { seed: core.SEED, cdc: cdcSuffolk() });
 
-    mount.innerHTML =
-      "<h2>Insights</h2>" +
+    var body =
       renderSlope(d) +
       renderSleepDebt(d.sleep_debt) +
       renderReference(d.reference) +
       '<p class="insights-note muted">' + esc(d.note) + "</p>";
+    mount.innerHTML = collapsibleCard("Insights", insightsTakeaway(d), body);
+  }
+
+  // One-sentence takeaway for the collapsed summary, from the slope result.
+  function insightsTakeaway(d) {
+    var p = d.primary || {};
+    if (!p.enough) return "Keep logging to see how sleep relates to your HRV.";
+    if (p.slope_excludes_zero) {
+      var dir = p.slope_ms_per_hour >= 0 ? "lifts" : "lowers";
+      return "More sleep " + dir + " your next-morning HRV.";
+    }
+    return "Last night\u2019s sleep barely predicts your next-morning HRV.";
+  }
+
+  // Collapsed, keyboard-accessible disclosure card with a summary takeaway.
+  function collapsibleCard(title, takeaway, bodyHtml) {
+    return (
+      '<details class="card-collapse">' +
+      '<summary class="card-summary">' +
+      '<span class="card-summary-title">' + esc(title) + "</span>" +
+      '<span class="card-summary-take">' + esc(takeaway) + "</span>" +
+      "</summary>" +
+      '<div class="card-body">' + bodyHtml + "</div>" +
+      "</details>"
+    );
   }
 
   function renderSlope(d) {
