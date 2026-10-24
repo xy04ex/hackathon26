@@ -585,12 +585,31 @@
     });
   }
 
-  // Pull the proven "drops on low days" task types from the patterns data so
-  // the reorder's learned-adjustment rule actually fires. Empty until the
-  // patterns analysis has evidence (credible interval excludes no effect).
-  function loadLearnedDemotions() {
+  // Count the days the user has logged a check-in (one key per date with
+  // records). Used to tell a real user how close they are to their own
+  // pattern analysis.
+  function loggedDayCount() {
+    const history = loadHistory();
+    return Object.keys(history).filter(function (d) {
+      return Array.isArray(history[d]) && history[d].length > 0;
+    }).length;
+  }
+
+  // Which task types the reorder may move later on low-recovery days.
+  //
+  // IMPORTANT: window.HUIFAN_PATTERNS.demotable_types comes from SIMULATED
+  // logs (scripts/patterns.py on data/simulated-logs.json). Applying it to a
+  // real user would move, say, their deep work later because of fake data.
+  // So we only use the simulated demotions when the SAMPLE dataset is active
+  // (demo). For uploaded or local real data, demotions must come from the
+  // user's OWN logged history — and until in-browser per-user pattern
+  // analysis exists, that is empty. Empty is the safe default: the reorder
+  // keeps the user's order.
+  function loadLearnedDemotions(source) {
     const p = window.HUIFAN_PATTERNS;
-    if (p && Array.isArray(p.demotable_types)) {
+    const isSimulatedDemo =
+      source === "sample" && p && p.simulated === true && Array.isArray(p.demotable_types);
+    if (isSimulatedDemo) {
       return p.demotable_types.slice();
     }
     return [];
@@ -603,11 +622,17 @@
   // after "Delete my data", or when showing sample data, without a full reload.
   function render() {
     const { rows, source } = pickDataSource();
-    recoveryContext.learnedDemotions = loadLearnedDemotions();
+    recoveryContext.learnedDemotions = loadLearnedDemotions(source);
     renderScore(rows, source);
     renderTasksSection();
     if (window.HuifanPatterns) {
-      window.HuifanPatterns.renderPatterns("patterns-section");
+      // Real data (uploaded/local) must not present the simulated table as the
+      // user's own. Tell the renderer the data context + how many days they
+      // have logged so far.
+      window.HuifanPatterns.renderPatterns("patterns-section", {
+        source: source,
+        loggedDays: loggedDayCount(),
+      });
     }
     if (window.HuifanInsights) {
       window.HuifanInsights.renderInsights("insights-section");

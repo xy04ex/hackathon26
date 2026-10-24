@@ -13,38 +13,72 @@
     return x === null || x === undefined ? "—" : Math.round(x * 100) + "%";
   }
 
-  function renderPatterns(mountId) {
+  // ctx = { source: "real"|"sample"|"none", loggedDays: number }
+  // For REAL data the committed patterns table is simulated, so we must NOT
+  // present it as the user's own. We show the table as a labelled demo of the
+  // method and tell the user their own patterns appear after enough logged
+  // days (showing how many they have so far).
+  function renderPatterns(mountId, ctx) {
     const mount = document.getElementById(mountId);
     if (!mount) return;
+    ctx = ctx || {};
+    const isReal = ctx.source === "real";
+    const loggedDays = ctx.loggedDays || 0;
+    const MIN_DAYS = 14; // days of logs before a personal analysis is meaningful
 
     const data = window.HUIFAN_PATTERNS;
     if (!data) {
       mount.innerHTML =
-        '<p class="muted">No patterns yet. Run ' +
-        "<code>scripts/patterns.py</code> to generate them.</p>";
+        "<h2>Patterns</h2>" +
+        '<p class="muted">No patterns to show yet.</p>';
       return;
     }
 
-    const simBanner = data.simulated
-      ? '<p class="sim-banner">Simulated data — ' +
+    // Banner: honest about whose data this is.
+    let banner;
+    if (isReal) {
+      const remaining = Math.max(0, MIN_DAYS - loggedDays);
+      banner =
+        '<p class="sim-banner">This table is a <strong>demo of the method on ' +
+        "simulated data</strong>, not your logs. Your own patterns appear once " +
+        "you have enough logged days. So far you have logged <strong>" +
+        loggedDays +
+        " day" +
+        (loggedDays === 1 ? "" : "s") +
+        "</strong>" +
+        (remaining > 0
+          ? " — about " + remaining + " more to go."
+          : " — enough to start building your own view.") +
+        "</p>";
+    } else if (data.simulated) {
+      banner =
+        '<p class="sim-banner">Simulated data — ' +
         data.n_records +
         " records with a planted pattern, used to demo and validate the " +
-        "method. Not your real logs.</p>"
-      : '<p class="data-badge data-badge--real">Your real logs (' +
+        "method. Not real logs.</p>";
+    } else {
+      banner =
+        '<p class="data-badge data-badge--real">Your real logs (' +
         data.n_records +
         " records).</p>";
+    }
 
     mount.innerHTML =
       "<h2>Patterns</h2>" +
       '<p class="muted patterns-help">How often each kind of task actually ' +
-      "gets done, by recovery tier. Rates are shrunk toward your overall " +
+      "gets done, by recovery tier. Rates are shrunk toward the overall " +
       "rate (" +
       pct(data.analysis.overall_rate) +
       ") when a cell is thin, so small samples don't overclaim.</p>" +
-      simBanner +
+      banner +
       renderTable(data.analysis) +
       renderRecoveryTest(data.recovery_test) +
-      renderDemotable(data.demotable_types);
+      // For real data the simulated demotions do NOT apply to the user, so we
+      // don't claim any type is "proven to drop" for them.
+      (isReal
+        ? '<p class="demotable muted">Your reorder keeps your own order until ' +
+          "your own logs show a type reliably drops on low days.</p>"
+        : renderDemotable(data.demotable_types));
   }
 
   function renderTable(analysis) {
