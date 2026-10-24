@@ -135,6 +135,23 @@ function reorderTasks(tasks, ctx) {
     }
   });
 
+  // Observe what the rules ACTUALLY did, so notes don't claim an action that
+  // never happened (e.g. "easing in with a quick task" when there was none).
+  const applied = {
+    quickFirst: items.some(function (it) {
+      return it.group === 2 && it.id === quickId;
+    }),
+    chunked: items.some(function (it) {
+      return !!it.chunk;
+    }),
+    demoted: items.some(function (it) {
+      return it.group === 8;
+    }),
+    dueFirst: items.some(function (it) {
+      return it.group === 0 || it.group === 1;
+    }),
+  };
+
   // Stable sort: by group, then original index.
   items.sort(function (a, b) {
     if (a.group !== b.group) return a.group - b.group;
@@ -151,26 +168,44 @@ function reorderTasks(tasks, ctx) {
     });
   });
 
-  return { ordered: ordered, notes: buildNotes(ctx, shortSleep, lowDay) };
+  return { ordered: ordered, notes: buildNotes(applied, sleepHours) };
 }
 
 function fmtH(h) {
   return (Math.round(h * 10) / 10) + " h";
 }
 
-/** One short line describing the overall ordering strategy applied. */
-function buildNotes(ctx, shortSleep, lowDay) {
+/**
+ * One short line describing what the ordering ACTUALLY did. Each clause is
+ * added only when the corresponding rule truly moved or annotated a task.
+ */
+function buildNotes(applied, sleepHours) {
   const parts = [];
-  if (shortSleep) {
+  if (applied.dueFirst) {
+    parts.push("Tasks due soon moved up.");
+  }
+  if (applied.quickFirst && applied.chunked) {
     parts.push(
-      "Short sleep: easing in with a quick task; demanding work in chunks."
+      "Short sleep (" +
+        fmtH(sleepHours) +
+        "): a quick task first, demanding work in 20–25 min chunks."
+    );
+  } else if (applied.quickFirst) {
+    parts.push(
+      "Short sleep (" + fmtH(sleepHours) + "): easing in with a quick task."
+    );
+  } else if (applied.chunked) {
+    parts.push(
+      "Short sleep (" +
+        fmtH(sleepHours) +
+        "): your most demanding task in 20–25 min chunks."
     );
   }
-  if (lowDay && (ctx.learnedDemotions || []).length > 0) {
+  if (applied.demoted) {
     parts.push("Low day: task types you tend to drop are moved later.");
   }
   if (parts.length === 0) {
-    parts.push("Due-first ordering; your original order otherwise kept.");
+    parts.push("Kept your original order.");
   }
   return parts.join(" ");
 }

@@ -9,6 +9,23 @@ const TASK_TYPES = ["deep work", "reading", "admin", "physical", "social"];
 
 const DEFAULT_TYPE = "admin";
 
+// Default effort guess per type (1 = quick, 3 = demanding). User-editable.
+// Rationale: admin/social are usually quick wins; reading/physical are medium;
+// deep work is the demanding one the short-sleep rule should chunk.
+const EFFORT_BY_TYPE = {
+  "deep work": 3,
+  reading: 2,
+  physical: 2,
+  admin: 1,
+  social: 1,
+};
+const DEFAULT_EFFORT = 2;
+
+/** Guess effort 1..3 from a task's type. Pure. */
+function effortForType(type) {
+  return EFFORT_BY_TYPE[type] || DEFAULT_EFFORT;
+}
+
 // Keyword -> type. Matched as whole words, case-insensitive. Lists are small
 // and readable on purpose; extend freely. First type with a match wins, using
 // the priority order below (more cognitively specific types first) so e.g.
@@ -142,19 +159,34 @@ function parseTasks(blob) {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
-  return lines.map((text, i) => ({
-    id: i + 1,
-    text,
-    type: tagTaskType(text),
-    effort: 2, // 1..3, user-editable; 2 = medium default
-    due: "later", // today | tomorrow | later; user-editable
-  }));
+  return lines.map((text, i) => {
+    const type = tagTaskType(text);
+    return {
+      id: i + 1,
+      text,
+      type,
+      effort: effortForType(type), // guessed from type, user-editable
+      due: "later", // today | tomorrow | later; user-editable
+    };
+  });
 }
 
 // Expose for the browser and for Node/JSC tests.
 if (typeof window !== "undefined") {
-  window.HuifanTag = { TASK_TYPES, DEFAULT_TYPE, tagTaskType, parseTasks };
+  window.HuifanTag = {
+    TASK_TYPES,
+    DEFAULT_TYPE,
+    tagTaskType,
+    effortForType,
+    parseTasks,
+  };
 }
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { TASK_TYPES, DEFAULT_TYPE, tagTaskType, parseTasks };
+  module.exports = {
+    TASK_TYPES,
+    DEFAULT_TYPE,
+    tagTaskType,
+    effortForType,
+    parseTasks,
+  };
 }
