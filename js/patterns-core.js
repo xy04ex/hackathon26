@@ -100,6 +100,16 @@
     return neg ? -out : out;
   }
 
+  // A task deferred with "Not today" is logged as skipped: it is neither done
+  // nor not-done, so it is EXCLUDED from completion rates (numerator and
+  // denominator). Mirrors patterns.py is_skipped / active-row filtering.
+  function isSkipped(r) {
+    return r.status === "skipped" || r.skipped === true;
+  }
+  function activeRows(rows) {
+    return rows.filter(function (r) { return !isSkipped(r); });
+  }
+
   function overallRate(rows) {
     if (!rows.length) return 0.5;
     var done = 0;
@@ -174,6 +184,7 @@
   }
 
   function analyze(rows) {
+    rows = activeRows(rows); // drop skipped tasks before any counting
     var m = overallRate(rows);
     // Keep the prior proper even at a 0% or 100% overall rate.
     if (m < PRIOR_MEAN_MIN) m = PRIOR_MEAN_MIN;
@@ -221,7 +232,7 @@
       if (!Array.isArray(day)) return;
       day.forEach(function (r) {
         if (TIERS.indexOf(r.tier) !== -1 && typeof r.done === "boolean") {
-          out.push({ type: r.type, tier: r.tier, done: r.done });
+          out.push({ type: r.type, tier: r.tier, done: r.done, status: r.status, skipped: r.skipped === true || r.status === "skipped" });
         }
       });
     });
@@ -234,7 +245,8 @@
     logGamma: logGamma, betacdf: betacdf, betappf: betappf, round4: round4,
     overallRate: overallRate, betaBinomialCell: betaBinomialCell,
     differenceInterval: differenceInterval, analyze: analyze,
-    demotableTypes: demotableTypes, recordsFromHistory: recordsFromHistory
+    demotableTypes: demotableTypes, recordsFromHistory: recordsFromHistory,
+    isSkipped: isSkipped, activeRows: activeRows
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.HuifanPatternsCore = api;

@@ -78,6 +78,36 @@ describe("patterns-core properties", () => {
     expect(a.types["reading"].drops_on_low).toBe(false);
   });
 
+  // Property (fix 4): a skipped task NEVER counts as not-done. Marking any
+  // subset of rows skipped must give the same analysis as removing them — so a
+  // skipped task is excluded from both numerator and denominator, and can never
+  // lower a completion rate the way a "not done" row would.
+  it("skipped tasks never count as not-done", () => {
+    const base = fc.array(
+      fc.record({
+        type: fc.constantFrom(...TYPES),
+        tier: fc.constantFrom(...TIERS),
+        done: fc.boolean(),
+      }),
+      { minLength: 1, maxLength: 60 }
+    );
+    fc.assert(
+      fc.property(base, fc.array(fc.boolean(), { maxLength: 60 }), (rows, skipMask) => {
+        // Mark some rows skipped (status="skipped"); crucially with done:false,
+        // which WITHOUT exclusion would count as "not done" and drag rates down.
+        const marked = rows.map((r, i) =>
+          skipMask[i] ? Object.assign({}, r, { done: false, status: "skipped" }) : r
+        );
+        const kept = rows.filter((_, i) => !skipMask[i]);
+        // Analysis of the marked set must equal analysis of the kept-only set.
+        expect(JSON.stringify(core.analyze(marked))).toBe(JSON.stringify(core.analyze(kept)));
+        // And a skipped row is reported as skipped, not as a not-done row.
+        marked.forEach((r) => { if (r.status === "skipped") expect(core.isSkipped(r)).toBe(true); });
+      }),
+      { numRuns: 100 }
+    );
+  });
+
   // recordsFromHistory ignores rows without a usable tier/done.
   it("recordsFromHistory keeps only usable rows", () => {
     const history = {
@@ -89,6 +119,9 @@ describe("patterns-core properties", () => {
       "2024-01-02": "not an array",
     };
     const recs = core.recordsFromHistory(history);
-    expect(recs).toEqual([{ type: "deep work", tier: "green", done: true }]);
+    // recordsFromHistory now carries status/skipped through for skip exclusion.
+    expect(recs).toEqual([
+      { type: "deep work", tier: "green", done: true, status: undefined, skipped: false },
+    ]);
   });
 });

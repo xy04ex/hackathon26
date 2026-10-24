@@ -59,6 +59,16 @@ def load_logs(path):
     ]
 
 
+def is_skipped(r):
+    # A "Not today" task is logged as skipped: neither done nor not-done, so it
+    # is EXCLUDED from completion rates. Mirrors js/patterns-core.js isSkipped.
+    return r.get("status") == "skipped" or r.get("skipped") is True
+
+
+def active_rows(rows):
+    return [r for r in rows if not is_skipped(r)]
+
+
 def overall_rate(rows):
     if not rows:
         return 0.5
@@ -217,6 +227,7 @@ def difference_excludes_zero(green_cell, red_cell):
 
 
 def analyze(rows):
+    rows = active_rows(rows)  # drop skipped tasks before any counting
     m = overall_rate(rows)
     # Keep the prior proper even at a 0% or 100% overall rate.
     m = min(PRIOR_MEAN_MAX, max(PRIOR_MEAN_MIN, m))
