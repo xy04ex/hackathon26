@@ -355,3 +355,31 @@ body {
 .check-fail { color: var(--red); }
 
 .demotable { margin-top: 12px; font-size: 0.88rem; }
+
+/* --- Insights page --- */
+#insights-section h2 { margin: 0 0 8px; font-size: 1.2rem; }
+.insights-lead { margin: 0 0 10px; }
+.device-note { margin: 0 0 10px; font-size: 0.85rem; }
+
+.device-change {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  font-size: 0.88rem;
+}
+.device-segments { margin: 6px 0 0; padding-left: 1.2em; font-size: 0.82rem; }
+
+.regression { margin: 0 0 12px; }
+.stat-line { margin: 4px 0; }
+.stat-caveat { margin: 4px 0 0; font-size: 0.82rem; }
+.regression .ci { font-size: 0.82rem; color: var(--muted); }
+
+.cdc-context {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.cdc-cite { margin: 6px 0 0; font-size: 0.75rem; }
+.insights-note { margin-top: 12px; font-size: 0.8rem; }

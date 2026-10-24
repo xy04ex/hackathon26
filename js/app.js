@@ -464,5 +464,8 @@
     if (window.HuifanPatterns) {
       window.HuifanPatterns.renderPatterns("patterns-section");
     }
+    if (window.HuifanInsights) {
+      window.HuifanInsights.renderInsights("insights-section");
+    }
   });
 })();
