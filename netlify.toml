@@ -1,0 +1,9 @@
+# Netlify config for 烩饭 (Huifan) — a no-build static site.
+# Plain HTML + CSS + vanilla JS; nothing to compile. Publish the repo root.
+# Real personal data (data/daily.json, data/daily.js, export.zip, etc.) is
+# git-ignored, so deploying from the committed repo never exposes it.
+[build]
+  command = ""
+  publish = "."
+
+# The app has no server-side routing; files are served as-is.
