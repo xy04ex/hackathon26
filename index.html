@@ -21,6 +21,9 @@
     <!-- Task input + reorder + check-in (tasks 3–5) mount here -->
     <section id="tasks-section" class="card"></section>
 
+    <!-- Patterns page (task 6) mounts here -->
+    <section id="patterns-section" class="card"></section>
+
     <footer class="app-footer">
       <p class="disclaimer">
         Not medical advice. Huifan doesn't diagnose; clinical decisions stay with professionals.
@@ -38,11 +41,13 @@
   -->
   <script src="data/daily.js" onerror="window.__noReal=true"></script>
   <script src="data/sample-daily.js" onerror="window.__noSample=true"></script>
+  <script src="data/patterns.js" onerror="window.__noPatterns=true"></script>
 
   <!-- Pure logic modules load first, UI wiring last. -->
   <script src="js/score.js"></script>
   <script src="js/order.js"></script>
   <script src="js/tag.js"></script>
+  <script src="js/patterns.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

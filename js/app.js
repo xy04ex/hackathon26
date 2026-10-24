@@ -444,10 +444,25 @@
     });
   }
 
+  // Pull the proven "drops on low days" task types from the patterns data so
+  // the reorder's learned-adjustment rule actually fires. Empty until the
+  // patterns analysis has evidence (credible interval excludes no effect).
+  function loadLearnedDemotions() {
+    const p = window.HUIFAN_PATTERNS;
+    if (p && Array.isArray(p.demotable_types)) {
+      return p.demotable_types.slice();
+    }
+    return [];
+  }
+
   // --- Boot -----------------------------------------------------------
   document.addEventListener("DOMContentLoaded", function () {
     const { rows, source } = pickDataSource();
+    recoveryContext.learnedDemotions = loadLearnedDemotions();
     renderScore(rows, source);
     renderTasksSection();
+    if (window.HuifanPatterns) {
+      window.HuifanPatterns.renderPatterns("patterns-section");
+    }
   });
 })();

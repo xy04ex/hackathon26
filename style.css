@@ -293,3 +293,65 @@ body {
 .ordered-item--done .ordered-text {
   text-decoration: line-through;
 }
+
+/* --- Patterns page --- */
+#patterns-section h2 { margin: 0 0 4px; font-size: 1.2rem; }
+.patterns-help { margin: 0 0 10px; font-size: 0.85rem; }
+
+.sim-banner {
+  font-size: 0.82rem;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 14%, transparent);
+  border: 1px dashed var(--yellow);
+}
+
+.table-wrap { overflow-x: auto; }
+.patterns-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.patterns-table th,
+.patterns-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.patterns-table thead th { font-weight: 600; }
+.patterns-table .tier-green { color: var(--green); }
+.patterns-table .tier-yellow { color: var(--yellow); }
+.patterns-table .tier-red { color: var(--red); }
+.patterns-table .ci {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.diff-cell { white-space: nowrap; }
+.drop-flag {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
+}
+
+.recovery-test {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.recovery-test h3 { margin: 0 0 4px; font-size: 1rem; }
+.recovery-test ul { margin: 6px 0 0; padding-left: 1.2em; }
+.recovery-test--pass { border-color: var(--green); }
+.recovery-test--fail { border-color: var(--red); }
+.check-pass { color: var(--green); }
+.check-fail { color: var(--red); }
+
+.demotable { margin-top: 12px; font-size: 0.88rem; }
