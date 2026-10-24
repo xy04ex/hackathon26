@@ -29,6 +29,16 @@
     </footer>
   </main>
 
+  <!--
+    Data loads via <script> tags (not fetch) so the app works when you just
+    open index.html as a file:// URL — browsers block fetch() of local JSON.
+    Real data (data/daily.js) is loaded first if present and wins over the
+    committed synthetic sample. Both are optional; app.js handles absence.
+    The onerror attribute keeps a missing file from throwing in the console.
+  -->
+  <script src="data/daily.js" onerror="window.__noReal=true"></script>
+  <script src="data/sample-daily.js" onerror="window.__noSample=true"></script>
+
   <!-- Pure logic modules load first, UI wiring last. -->
   <script src="js/score.js"></script>
   <script src="js/order.js"></script>

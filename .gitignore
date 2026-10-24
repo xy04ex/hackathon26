@@ -3,6 +3,7 @@ export.zip
 export.xml
 apple_health_export/
 data/daily.json
+data/daily.js
 
 # Secrets — never commit
 .env

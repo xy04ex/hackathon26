@@ -82,3 +82,55 @@ body {
 }
 
 .privacy { font-size: 0.8rem; margin: 0; }
+
+/* --- Data source badge --- */
+.data-badge {
+  font-size: 0.8rem;
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.data-badge--real {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+}
+.data-badge--sample {
+  color: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 14%, transparent);
+}
+
+/* --- Recovery score card --- */
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+.score-dial {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.score-dial--green { background: var(--green); }
+.score-dial--yellow { background: var(--yellow); }
+.score-dial--red { background: var(--red); }
+.score-number {
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.score-band {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+.score-meta { flex: 1 1 auto; }
+.score-date { margin: 0 0 4px; font-size: 0.85rem; }
+.score-reason { margin: 0; }
+.score-learning { margin: 0; color: var(--muted); }
