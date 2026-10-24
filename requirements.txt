@@ -1,8 +1,0 @@
-# Python dependencies for the OFFLINE data-science scripts only.
-# The web app (index.html + js/) needs none of this — it just renders the
-# committed JSON these scripts produce. The health parser (parse_health.py)
-# is standard-library only and also needs nothing here.
-#
-# Install with:  pip3 install -r requirements.txt
-numpy==1.26.4
-scipy==1.12.0

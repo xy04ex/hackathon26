@@ -15,7 +15,7 @@
 
 I don't own a WHOOP. My Apple Watch already records heart-rate variability (HRV), resting heart rate and sleep every night, but a recovery number on its own never changed my day. I still had the same problem set and the same lab report to get through. The services that turn recovery into advice mostly sit behind subscriptions, so the people with the least slack, like students in exam weeks, are the least likely to have them. So I built Huifan.
 
-I'd prototyped the idea for myself before the hackathon, as a personal page my AI assistant updated each morning. All of the code in this repository was written today in Kiro, starting from an empty repo, and the git history shows it. From the prototype I reused the recovery score formula, the reorder rules, and the pot illustration. The parser, in-browser upload, per-user insights, the learning model and all the tests are new.
+I'd prototyped the idea for myself before the hackathon, as a personal page my AI assistant updated each morning. All of the app's code was written on October 24 in Kiro, and the git history shows it; the only earlier commits are repo setup (a sync test, the `.gitignore`, and the first steering docs, written the night before). From the prototype I reused the recovery score formula, the reorder rules, and the pot illustration. The parser, in-browser upload, per-user insights, the learning model and all the tests are new.
 
 ## What it does
 

@@ -7,7 +7,7 @@ inclusion: always
 ## What it is
 烩饭 turns health data that a normal phone or watch already records (HRV, resting heart rate, sleep) into a daily **recovery score** measured against the user's **own** baseline, then **reorders the tasks the user has already decided to do today** so the order fits how recovered they are.
 
-It is a free, on-device, WHOOP-like experience for people who don't own a WHOOP. The builder (Yoyo, a BU biology student) made it because she doesn't own one and uses 烩饭 herself. She is the first and current user.
+It is a free, on-device, WHOOP-like experience for people who don't own a WHOOP. The builder (a college student) made it because she doesn't own one and uses 烩饭 herself. She is the first and current user.
 
 ## What it is NOT — do not drift into these
 - **Not a task recommender.** It never adds, invents, suggests, or deletes tasks. Input list in → same list, new order, out.

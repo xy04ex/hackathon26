@@ -24,7 +24,7 @@ pattern, we check that the method flags "deep work" as dropping on red days
 Reads:  data/simulated-logs.json  (or a path passed as argv[1])
 Writes: data/patterns.json        (what patterns.js renders)
 
-Requires numpy + scipy (see requirements.txt).
+Standard library only (math.lgamma), so it matches js/patterns-core.js exactly.
 """
 
 import json

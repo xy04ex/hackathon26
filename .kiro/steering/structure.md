@@ -28,8 +28,7 @@ hackathon26/
 │   ├── cdc-short-sleep-ma.json  # CDC PLACES, MA counties (committed)
 │   ├── simulated-logs.json      # labeled SIMULATED task logs (committed)
 │   ├── patterns.json            # Beta-Binomial output (committed)
-│   └── insights.json            # correlation + CDC summary (committed)
-├── requirements.txt      # numpy, scipy (analysis scripts only)
+│   └── (insights are computed in the browser; nothing personal is committed)
 ├── .kiro/
 │   ├── steering/         # these files
 │   ├── specs/            # feature specs (requirements → design → tasks)
@@ -37,8 +36,7 @@ hackathon26/
 └── README.md
 ```
 
-Note: the health parser (`parse_health.py`) uses the Python standard library only.
-Only the data-science scripts (`patterns.py`, `insights.py`) need `requirements.txt`.
+Note: all Python scripts use the standard library only; nothing to install.
 The web app needs no install; `npm` is only for the dev-only tests under `tests/`.
 
 ## Rules
