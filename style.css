@@ -686,3 +686,12 @@ body {
 }
 
 .usp-sub { margin: 2px 0 12px; font-size: 0.82rem; font-style: italic; }
+
+/* D11: Patterns one-line conclusion, shown large above the table. */
+.patterns-conclusion {
+  margin: 4px 0 14px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}

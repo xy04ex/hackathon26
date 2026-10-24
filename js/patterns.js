@@ -109,7 +109,9 @@
       takeaway = patternsTakeaway(data.analysis, data.demotable_types);
     }
 
-    mount.innerHTML = collapsibleCard("Patterns", takeaway, body);
+    // D11: the one-line conclusion shown large, above the table.
+    var conclusion = '<p class="patterns-conclusion">' + esc(takeaway) + "</p>";
+    mount.innerHTML = collapsibleCard("Patterns", takeaway, conclusion + body);
   }
 
   function renderTable(analysis) {
