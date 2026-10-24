@@ -97,9 +97,107 @@
       .replace(/>/g, "&gt;");
   }
 
+  // --- Task input + tagging (task 3) ----------------------------------
+  //
+  // State: the current list of tasks. Tasks are produced by the keyword
+  // tagger, then the user may edit each task's type and effort. Later tasks
+  // (reorder, check-in) will read and extend this same list.
+  let tasks = [];
+
+  function renderTasksSection() {
+    const section = document.getElementById("tasks-section");
+    if (!section) return;
+
+    section.innerHTML =
+      "<h2>Today's tasks</h2>" +
+      '<p class="muted tasks-help">One task per line. We guess a type ' +
+      "from keywords — change it if we got it wrong.</p>" +
+      '<textarea id="task-input" class="task-input" rows="5" ' +
+      'placeholder="write lab report&#10;read chapter 4&#10;' +
+      'reply to emails&#10;gym&#10;coffee with Sam"></textarea>' +
+      '<button id="tag-btn" class="btn">Tag tasks</button>' +
+      '<ul id="task-list" class="task-list"></ul>';
+
+    const tagBtn = section.querySelector("#tag-btn");
+    tagBtn.addEventListener("click", onTagClick);
+
+    renderTaskList();
+  }
+
+  function onTagClick() {
+    const input = document.getElementById("task-input");
+    if (!input) return;
+    tasks = window.HuifanTag.parseTasks(input.value);
+    renderTaskList();
+  }
+
+  function renderTaskList() {
+    const list = document.getElementById("task-list");
+    if (!list) return;
+
+    if (tasks.length === 0) {
+      list.innerHTML =
+        '<li class="muted task-empty">No tasks yet. ' +
+        "Type some above and tag them.</li>";
+      return;
+    }
+
+    const types = window.HuifanTag.TASK_TYPES;
+    list.innerHTML = tasks
+      .map(function (t, idx) {
+        const options = types
+          .map(function (ty) {
+            const sel = ty === t.type ? " selected" : "";
+            return '<option value="' + ty + '"' + sel + ">" + ty + "</option>";
+          })
+          .join("");
+        const effortOptions = [1, 2, 3]
+          .map(function (e) {
+            const sel = e === t.effort ? " selected" : "";
+            return '<option value="' + e + '"' + sel + ">" + e + "</option>";
+          })
+          .join("");
+        return (
+          '<li class="task-item">' +
+          '<span class="task-text">' +
+          escapeHtml(t.text) +
+          "</span>" +
+          '<span class="task-controls">' +
+          '<select class="task-type" data-idx="' +
+          idx +
+          '" aria-label="Task type">' +
+          options +
+          "</select>" +
+          '<select class="task-effort" data-idx="' +
+          idx +
+          '" aria-label="Effort 1 to 3">' +
+          effortOptions +
+          "</select>" +
+          "</span>" +
+          "</li>"
+        );
+      })
+      .join("");
+
+    // Wire the editable dropdowns back into state.
+    list.querySelectorAll(".task-type").forEach(function (sel) {
+      sel.addEventListener("change", function (e) {
+        const i = Number(e.target.getAttribute("data-idx"));
+        if (tasks[i]) tasks[i].type = e.target.value;
+      });
+    });
+    list.querySelectorAll(".task-effort").forEach(function (sel) {
+      sel.addEventListener("change", function (e) {
+        const i = Number(e.target.getAttribute("data-idx"));
+        if (tasks[i]) tasks[i].effort = Number(e.target.value);
+      });
+    });
+  }
+
   // --- Boot -----------------------------------------------------------
   document.addEventListener("DOMContentLoaded", function () {
     const { rows, source } = pickDataSource();
     renderScore(rows, source);
+    renderTasksSection();
   });
 })();
