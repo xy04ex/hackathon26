@@ -28,26 +28,38 @@ describe("patterns-core properties", () => {
   });
 
   // Property 4: interval validity.
-  it("cell intervals are valid (0<=lo<=hi<=1) for well-posed cells", () => {
-    // Degenerate posteriors (empty cells when the overall rate is exactly 0 or
-    // 1, giving a Beta with a zero shape parameter) are improper and not a
-    // real-use path (real users pass the min-days gate first). We assert the
-    // ordering invariant on cells with data, and the [0,1] bounds always.
+  // Property 4: interval validity for EVERY cell, including empty cells and a
+  // 0%/100% overall completion rate. The prior mean is clamped to [0.01, 0.99]
+  // so the posterior is always proper, so estimate is always within its CI.
+  it("every cell has 0<=ci_low<=estimate<=ci_high<=1", () => {
     fc.assert(fc.property(logsArb, (logs) => {
       const a = core.analyze(logs);
-      const m = a.overall_rate;
-      const degenerate = m <= 0 || m >= 1;
       Object.values(a.types).forEach((t) => TIERS.forEach((tier) => {
         const c = t.tiers[tier];
         expect(c.ci_low).toBeGreaterThanOrEqual(0);
+        expect(c.ci_low).toBeLessThanOrEqual(c.estimate + 1e-6);
+        expect(c.estimate).toBeLessThanOrEqual(c.ci_high + 1e-6);
         expect(c.ci_high).toBeLessThanOrEqual(1);
-        expect(c.ci_low).toBeLessThanOrEqual(c.ci_high + 1e-6);
-        if (!degenerate && c.n > 0) {
-          expect(c.ci_low).toBeLessThanOrEqual(c.estimate + 1e-6);
-          expect(c.estimate).toBeLessThanOrEqual(c.ci_high + 1e-6);
-        }
       }));
     }), RUNS);
+  });
+
+  // The specific regression: a 100% (or 0%) overall rate must still give a
+  // proper posterior for empty cells (estimate within the interval).
+  it("100% and 0% overall rate keep empty-cell intervals proper", () => {
+    [true, false].forEach((allDone) => {
+      // Only green cells have data; yellow/red are empty.
+      const logs = [];
+      for (let i = 0; i < 20; i++) logs.push({ type: "deep work", tier: "green", done: allDone });
+      const a = core.analyze(logs);
+      TIERS.forEach((tier) => {
+        const c = a.types["deep work"].tiers[tier];
+        expect(c.ci_low).toBeLessThanOrEqual(c.estimate + 1e-6);
+        expect(c.estimate).toBeLessThanOrEqual(c.ci_high + 1e-6);
+        expect(c.ci_low).toBeGreaterThanOrEqual(0);
+        expect(c.ci_high).toBeLessThanOrEqual(1);
+      });
+    });
   });
 
   // Property 5: drops monotonic in separation — a type whose green is all done

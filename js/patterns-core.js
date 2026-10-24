@@ -15,6 +15,10 @@
   var TIERS = ["green", "yellow", "red"];
   var PRIOR_STRENGTH = 8.0;
   var CI_MASS = 0.94;
+  // Clamp the prior mean so a 100%/0% overall rate can't produce a
+  // degenerate Beta(k0,0)/Beta(0,k0) prior (improper posterior for empty
+  // cells). A real user CAN hit a 100% or 0% completion rate.
+  var PRIOR_MEAN_MIN = 0.01, PRIOR_MEAN_MAX = 0.99;
   var CI_LO = (1 - CI_MASS) / 2; // 0.03
   var CI_HI = 1 - CI_LO;         // 0.97
   var GRID = 1000;               // difference-grid resolution (shared with py)
@@ -171,6 +175,9 @@
 
   function analyze(rows) {
     var m = overallRate(rows);
+    // Keep the prior proper even at a 0% or 100% overall rate.
+    if (m < PRIOR_MEAN_MIN) m = PRIOR_MEAN_MIN;
+    else if (m > PRIOR_MEAN_MAX) m = PRIOR_MEAN_MAX;
     var typeSet = {};
     rows.forEach(function (r) { typeSet[r.type] = true; });
     var types = Object.keys(typeSet).sort();
@@ -223,6 +230,7 @@
 
   var api = {
     TIERS: TIERS, PRIOR_STRENGTH: PRIOR_STRENGTH, CI_MASS: CI_MASS, GRID: GRID,
+    PRIOR_MEAN_MIN: PRIOR_MEAN_MIN, PRIOR_MEAN_MAX: PRIOR_MEAN_MAX,
     logGamma: logGamma, betacdf: betacdf, betappf: betappf, round4: round4,
     overallRate: overallRate, betaBinomialCell: betaBinomialCell,
     differenceInterval: differenceInterval, analyze: analyze,

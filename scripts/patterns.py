@@ -38,6 +38,11 @@ TIERS = ["green", "yellow", "red"]
 # observations before it pulls away from the overall rate. Tunable.
 PRIOR_STRENGTH = 8.0
 
+# Clamp the prior mean so a 100%/0% overall rate can't produce a
+# degenerate Beta(k0,0)/Beta(0,k0) prior. A real user CAN hit 100%/0%.
+PRIOR_MEAN_MIN = 0.01
+PRIOR_MEAN_MAX = 0.99
+
 # Credible interval mass.
 CI_MASS = 0.94
 CI_LO = (1 - CI_MASS) / 2
@@ -213,6 +218,8 @@ def difference_excludes_zero(green_cell, red_cell):
 
 def analyze(rows):
     m = overall_rate(rows)
+    # Keep the prior proper even at a 0% or 100% overall rate.
+    m = min(PRIOR_MEAN_MAX, max(PRIOR_MEAN_MIN, m))
     types = sorted({r["type"] for r in rows})
 
     # Count done/total per (type, tier).
