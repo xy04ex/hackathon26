@@ -695,3 +695,72 @@ body {
   line-height: 1.35;
   color: var(--ink);
 }
+
+/* --- C8/C9: two-column first-run redesign ----------------------------- */
+.onboarding--two { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 720px) {
+  .onboarding--two { grid-template-columns: 1fr 1fr; align-items: start; }
+}
+.ob-left { min-width: 0; }
+
+/* 4 steps as equal tiles: 2x2 on phones (never 3+1), 4-in-a-row on wide. */
+.usp-tiles {
+  list-style: none; margin: 16px 0 0; padding: 0;
+  display: grid; gap: 8px; grid-template-columns: 1fr 1fr;
+}
+@media (min-width: 720px) { .usp-tiles { grid-template-columns: repeat(4, 1fr); } }
+.usp-tiles li {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--sunk); min-width: 0;
+}
+.usp-tiles .usp-n {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--on-c);
+  font-size: 0.72rem; font-weight: 700;
+}
+.usp-tiles .usp-t { font-size: 0.82rem; font-weight: 500; color: var(--ink2); }
+
+/* Right-column choice card */
+.ob-choice {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface);
+}
+.ob-primary { margin-top: 0; width: 100%; }
+
+/* Outline button that expands (details/summary) */
+.ob-own { }
+.ob-own-summary {
+  display: block; width: 100%; text-align: center; margin-top: 0;
+  list-style: none; user-select: none;
+}
+.ob-own-summary::-webkit-details-marker { display: none; }
+.ob-own-body { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Segmented toggle (radios styled as two segments) */
+.seg {
+  display: inline-flex; border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden; background: var(--bg);
+}
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  flex: 1 1 auto; text-align: center; padding: 7px 14px; cursor: pointer;
+  font-size: 0.85rem; color: var(--ink2); white-space: nowrap;
+}
+.seg label + input + label { border-left: 1px solid var(--line); }
+.seg input:checked + label { background: var(--accent); color: var(--on-c); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* File picker as a label button; native input hidden but accessible */
+.ob-file-input {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.ob-file-btn { margin-top: 0; display: inline-block; text-align: center; cursor: pointer; }
+.ob-file-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* C9 privacy lock line */
+.ob-lock { margin: 6px 0 0; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
+.ob-lock-icon { font-size: 0.95em; }

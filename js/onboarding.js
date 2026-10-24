@@ -138,43 +138,66 @@
       : "";
 
     section.innerHTML =
-      '<div class="onboarding">' +
-      // No duplicate app-name heading here; the header carries the name.
-      // USP: what makes Huifan different from a plain recovery score.
+      '<div class="onboarding onboarding--two">' +
+
+      // LEFT column: tagline, USP, and the 4 steps as equal tiles.
+      '<div class="ob-left">' +
       '<p class="usp">Huifan turns your recovery score into today\u2019s task ' +
       "order, then learns from what you actually get done.</p>" +
-      '<p class="usp-sub muted">\u70e9\u996d (hu\u00ecf\u00e0n) is a one-pot rice dish: ' +
-      "whatever you have, cooked together.</p>" +
-      // Compact 4-step strip of the core loop.
-      '<ol class="usp-strip">' +
-      '<li><span class="usp-n">1</span>Read your data</li>' +
-      '<li><span class="usp-n">2</span>Reorder today</li>' +
-      '<li><span class="usp-n">3</span>Log what you did</li>' +
-      '<li><span class="usp-n">4</span>Learn your patterns</li>' +
+      '<p class="usp-sub muted">\u70e9\u996d (hu\u00ecf\u00e0n) is a one-pot rice ' +
+      "dish: whatever you have, cooked together.</p>" +
+      '<ol class="usp-tiles">' +
+      '<li><span class="usp-n">1</span><span class="usp-t">Read your data</span></li>' +
+      '<li><span class="usp-n">2</span><span class="usp-t">Reorder today</span></li>' +
+      '<li><span class="usp-n">3</span><span class="usp-t">Log what you did</span></li>' +
+      '<li><span class="usp-n">4</span><span class="usp-t">Learn your patterns</span></li>' +
       "</ol>" +
-      '<p class="muted">Bring in your Apple Health data to get a recovery ' +
-      "score against your own baseline.</p>" +
+      "</div>" +
+
+      // RIGHT column: the choice card.
+      '<div class="ob-right">' +
+      '<div class="ob-choice">' +
+      '<button id="ob-sample" class="btn btn--primary ob-primary">' +
+      "Try it with sample data</button>" +
+
+      // Outline button that expands to the real-upload flow.
+      '<details class="ob-own">' +
+      '<summary class="btn btn--secondary ob-own-summary">' +
+      "Use my own Apple Health data</summary>" +
+      '<div class="ob-own-body">' +
       '<ol class="onboarding-steps">' +
       "<li>Open the <strong>Health</strong> app on your iPhone.</li>" +
       "<li>Tap your <strong>profile</strong> picture (top right).</li>" +
       "<li>Choose <strong>Export All Health Data</strong> to get " +
       "<code>export.zip</code>.</li>" +
       "</ol>" +
-      '<label class="onboarding-range">How much to read:' +
-      '<span class="range-opts">' +
-      '<label><input type="radio" name="ob-range" value="6m" checked> ' +
-      "Last 6 months</label>" +
-      '<label><input type="radio" name="ob-range" value="all"> ' +
-      "Everything</label>" +
-      "</span></label>" +
-      '<input type="file" id="ob-file" accept=".zip" class="onboarding-file">' +
-      '<p class="muted onboarding-privacy">Your file is read right here in ' +
-      "your browser. It is never uploaded or sent anywhere.</p>" +
+
+      // Range as a segmented toggle (radios styled as two segments).
+      '<div class="seg" role="group" aria-label="How much to read">' +
+      '<input type="radio" id="seg-6m" name="ob-range" value="6m" checked>' +
+      '<label for="seg-6m">Last 6 months</label>' +
+      '<input type="radio" id="seg-all" name="ob-range" value="all">' +
+      '<label for="seg-all">Everything</label>' +
+      "</div>" +
+
+      // File picker styled as a label button (native input hidden).
+      '<label class="btn btn--secondary ob-file-btn">' +
+      "Choose export.zip" +
+      '<input type="file" id="ob-file" accept=".zip" class="ob-file-input">' +
+      "</label>" +
       phoneNote +
-      '<div class="onboarding-or"><button id="ob-sample" class="btn btn--secondary">' +
-      "Try with sample data</button></div>" +
+      "</div>" + // ob-own-body
+      "</details>" +
+
       '<div id="ob-status" class="onboarding-status" aria-live="polite"></div>' +
-      "</div>";
+
+      // C9: privacy lock line at the bottom of the card.
+      '<p class="ob-lock muted"><span class="ob-lock-icon" aria-hidden="true">' +
+      "\uD83D\uDD12</span> Read in your browser. Never uploaded.</p>" +
+      "</div>" + // ob-choice
+      "</div>" + // ob-right
+
+      "</div>"; // onboarding--two
 
     var fileInput = section.querySelector("#ob-file");
     fileInput.addEventListener("change", function () {
