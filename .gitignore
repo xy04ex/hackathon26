@@ -11,6 +11,5 @@ data/daily.js
 .DS_Store
 __pycache__/
 
-# Dev-only test dependencies
+# Dev-only test dependencies (lockfile is committed to pin versions)
 tests/node_modules/
-tests/package-lock.json
