@@ -604,14 +604,37 @@
   // user's OWN logged history — and until in-browser per-user pattern
   // analysis exists, that is empty. Empty is the safe default: the reorder
   // keeps the user's order.
+  // Days of logs before a real user's own pattern analysis is meaningful.
+  const PATTERNS_MIN_DAYS = 14;
+
+  // Compute the user's OWN Beta-Binomial analysis in the browser from their
+  // logged check-in history (localStorage). Returns null if patterns-core is
+  // unavailable. Pure per-user; no simulated data involved.
+  function ownPatternsAnalysis() {
+    if (!window.HuifanPatternsCore) return null;
+    const records = window.HuifanPatternsCore.recordsFromHistory(loadHistory());
+    if (records.length === 0) return null;
+    return window.HuifanPatternsCore.analyze(records);
+  }
+
+  // Which task types the reorder may move later on low-recovery days.
+  //
+  // SAMPLE mode (demo): use the committed SIMULATED demotable_types so the demo
+  // shows the full loop. REAL/local data: demotions come ONLY from the user's
+  // OWN in-browser analysis, and only once they have enough logged days AND a
+  // type's green-minus-red interval excludes zero. Until then, empty — the
+  // reorder keeps the user's order. Simulated data never touches real users.
   function loadLearnedDemotions(source) {
-    const p = window.HUIFAN_PATTERNS;
-    const isSimulatedDemo =
-      source === "sample" && p && p.simulated === true && Array.isArray(p.demotable_types);
-    if (isSimulatedDemo) {
-      return p.demotable_types.slice();
+    if (source === "sample") {
+      const p = window.HUIFAN_PATTERNS;
+      return p && p.simulated === true && Array.isArray(p.demotable_types)
+        ? p.demotable_types.slice()
+        : [];
     }
-    return [];
+    // real or local
+    if (loggedDayCount() < PATTERNS_MIN_DAYS) return [];
+    const a = ownPatternsAnalysis();
+    return a ? window.HuifanPatternsCore.demotableTypes(a) : [];
   }
 
   // --- Boot -----------------------------------------------------------
@@ -631,6 +654,11 @@
       window.HuifanPatterns.renderPatterns("patterns-section", {
         source: source,
         loggedDays: loggedDayCount(),
+        minDays: PATTERNS_MIN_DAYS,
+        ownAnalysis:
+          source !== "sample" && loggedDayCount() >= PATTERNS_MIN_DAYS
+            ? ownPatternsAnalysis()
+            : null,
       });
     }
     if (window.HuifanInsights) {
