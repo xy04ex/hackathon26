@@ -13,6 +13,10 @@
       <p class="tagline">Your recovery, turned into today's order.</p>
     </header>
 
+    <!-- First-run onboarding (browser-onboarding) mounts here. Empty once
+         data is present, except for a small "Your data" manage control. -->
+    <section id="onboarding-section" class="card"></section>
+
     <!-- Recovery score (task 2) mounts here -->
     <section id="score-section" class="card" aria-live="polite">
       <p class="muted">Loading…</p>
@@ -42,6 +46,24 @@
     committed synthetic sample. Both are optional; app.js handles absence.
     The onerror attribute keeps a missing file from throwing in the console.
   -->
+  <!--
+    Bootstrap: hydrate window.HUIFAN_DAILY from the browser store (written by
+    onboarding) BEFORE app.js picks a data source. Real committed data
+    (data/daily.js) still wins because it loads just after and overwrites.
+  -->
+  <script>
+    (function () {
+      try {
+        var raw = window.localStorage.getItem("huifan.daily.v1");
+        if (raw) {
+          var rows = JSON.parse(raw);
+          if (Array.isArray(rows) && rows.length > 0) window.HUIFAN_DAILY = rows;
+        }
+      } catch (e) {
+        /* storage off — onboarding still works for the session */
+      }
+    })();
+  </script>
   <script src="data/daily.js" onerror="window.__noReal=true"></script>
   <script src="data/sample-daily.js" onerror="window.__noSample=true"></script>
   <script src="data/patterns.js" onerror="window.__noPatterns=true"></script>
@@ -53,6 +75,7 @@
   <script src="js/tag.js"></script>
   <script src="js/patterns.js"></script>
   <script src="js/insights.js"></script>
+  <script src="js/onboarding.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
