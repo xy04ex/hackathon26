@@ -183,9 +183,12 @@
   }
 
   function renderSampleBack(section) {
+    // Single sample notice for the whole app: the message AND the action to
+    // switch to real data live here, so the score card shows no separate badge.
     section.innerHTML =
       '<div class="onboarding onboarding--sample">' +
-      '<p class="muted">Showing sample (synthetic) data.</p>' +
+      '<p class="data-badge data-badge--sample">Sample data — synthetic, for ' +
+      "the demo. Upload your Apple Health export to use your own.</p>" +
       '<button id="ob-own" class="btn btn--secondary">Use my own export</button>' +
       "</div>";
     section.querySelector("#ob-own").addEventListener("click", function () {

@@ -102,10 +102,9 @@
       );
     }
     if (source === "sample") {
-      return (
-        '<p class="data-badge data-badge--sample">Sample data — ' +
-        "synthetic, for the demo. Upload your Apple Health export to use your own.</p>"
-      );
+      // The single sample notice lives in the onboarding card (with the
+      // "Use my own export" action), so we don't repeat a badge here.
+      return "";
     }
     return '<p class="data-badge data-badge--sample">No data loaded.</p>';
   }
