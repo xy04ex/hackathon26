@@ -84,7 +84,11 @@ def pearson_r(x, y):
     vx = neumaier_sum([d * d for d in dx])
     vy = neumaier_sum([d * d for d in dy])
     denom = math.sqrt(vx * vy)
-    return float("nan") if denom == 0 else cov / denom
+    if denom == 0:
+        return float("nan")
+    r = cov / denom
+    # Clamp tiny floating-point overshoot; Pearson r is defined on [-1, 1].
+    return max(-1.0, min(1.0, r))
 
 
 def ols_slope_intercept(x, y):

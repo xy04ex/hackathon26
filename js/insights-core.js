@@ -66,7 +66,11 @@
     for (var j = 0; j < n; j++) { sxy.push(dx[j]*dy[j]); sxx.push(dx[j]*dx[j]); syy.push(dy[j]*dy[j]); }
     var cov = neumaierSum(sxy), vx = neumaierSum(sxx), vy = neumaierSum(syy);
     var denom = Math.sqrt(vx * vy);
-    return denom === 0 ? NaN : cov / denom;
+    if (denom === 0) return NaN;
+    var r = cov / denom;
+    // Clamp tiny floating-point overshoot; Pearson r is defined on [-1, 1].
+    if (r > 1) r = 1; else if (r < -1) r = -1;
+    return r;
   }
   // OLS y ~ x via the closed-form slope/intercept (built on Neumaier sums).
   function olsSlopeIntercept(x, y) {
