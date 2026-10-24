@@ -37,7 +37,9 @@
   --on-c: #FFFFFF;
   --display: "ZCOOL QingKe HuangYou", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --body: "Red Hat Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
-  --mono: "Red Hat Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Monospace dropped: all text is Red Hat Text. --mono kept as an
+     alias to --body so existing references resolve to the body font. */
+  --mono: var(--body);
 
   /* Aliases so existing component CSS keeps working against the v1 palette. */
   --card: var(--surface);
@@ -599,7 +601,8 @@ body {
 }
 .card-collapse[open] > .card-summary::before { transform: rotate(90deg); }
 .card-summary-title {
-  font-family: var(--display);
+  font-family: var(--body);
+  font-weight: 600;
   font-size: 1.2rem;
   color: var(--ink);
 }
@@ -621,7 +624,8 @@ body {
 /* --- Completion reward: bowl message, topping pop, confetti ----------- */
 .done-message {
   margin: 4px 0 0;
-  font-family: var(--display);
+  font-family: var(--body);
+  font-weight: 600;
   font-size: 1.05rem;
   color: var(--ink);
   text-align: center;
