@@ -31,94 +31,33 @@ function effortForType(type) {
 // the priority order below (more cognitively specific types first) so e.g.
 // "write report" tags as deep work, not admin.
 const KEYWORDS = {
+  // Multi-word phrases are checked against the whole text; single words are
+  // matched as whole words. Order within a type doesn't matter; cross-type
+  // ties are broken by TYPE_PRIORITY below.
   "deep work": [
-    "write",
-    "writing",
-    "code",
-    "coding",
-    "program",
-    "debug",
-    "design",
-    "essay",
-    "problem",
-    "problems",
-    "proof",
-    "analysis",
-    "analyze",
-    "thesis",
-    "research",
-    "study",
-    "revise",
-    "draft",
-    "plan",
-    "architecture",
+    "worksheet", "postlab", "post lab", "prelab", "pre lab", "lab report",
+    "problem set", "pset", "problem sets", "essay", "paper", "code", "coding",
+    "program", "debug", "study", "review", "exam", "write", "writing", "proof",
+    "analysis", "analyze", "thesis", "research", "revise", "draft", "design",
+    "architecture", "homework", "assignment",
   ],
   reading: [
-    "read",
-    "reading",
-    "chapter",
-    "paper",
-    "papers",
-    "article",
-    "textbook",
-    "notes",
-    "review",
-    "lecture",
-    "slides",
+    "read", "reading", "chapter", "article", "articles", "textbook", "lecture",
+    "slides", "notes",
   ],
   admin: [
-    "email",
-    "emails",
-    "reply",
-    "schedule",
-    "book",
-    "pay",
-    "bill",
-    "bills",
-    "form",
-    "forms",
-    "submit",
-    "register",
-    "errand",
-    "errands",
-    "organize",
-    "file",
-    "sort",
-    "calendar",
-    "appointment",
+    "email", "emails", "reply", "schedule", "book", "pay", "bill", "bills",
+    "form", "forms", "submit", "register", "errand", "errands", "organize",
+    "file", "sort", "calendar", "appointment", "admin",
   ],
   physical: [
-    "run",
-    "running",
-    "gym",
-    "workout",
-    "exercise",
-    "walk",
-    "yoga",
-    "swim",
-    "bike",
-    "lift",
-    "stretch",
-    "clean",
-    "laundry",
-    "groceries",
-    "cook",
+    "workout", "work out", "gym", "fitrec", "run", "running", "yoga", "swim",
+    "swimming", "lift", "lifting", "walk", "walking", "exercise", "bike",
+    "biking", "stretch", "hike", "hiking",
   ],
   social: [
-    "call",
-    "meet",
-    "meeting",
-    "lunch",
-    "dinner",
-    "coffee",
-    "party",
-    "hang",
-    "friend",
-    "friends",
-    "family",
-    "date",
-    "text",
-    "visit",
+    "call", "meet", "meeting", "dinner", "coffee", "text", "lunch", "party",
+    "hang", "hangout", "friend", "friends", "family", "date", "visit", "brunch",
   ],
 };
 
@@ -126,24 +65,33 @@ const KEYWORDS = {
 const TYPE_PRIORITY = ["deep work", "reading", "physical", "social", "admin"];
 
 /**
- * Guess a task type from its text. Pure; returns one of TASK_TYPES.
- * Whole-word, case-insensitive matching. Falls back to DEFAULT_TYPE.
+ * Guess a task type from its text. Pure.
+ * - Single-word keywords match as whole words (case-insensitive).
+ * - Multi-word keywords (e.g. "work out", "lab report") match as a substring
+ *   of the normalized text, so phrases aren't missed by word-splitting.
+ * Returns { type, guessed } — guessed is true when NOTHING matched and we fell
+ * back to the neutral default, so the UI can visibly flag it for the user.
  */
 function tagTaskType(text) {
-  if (!text) return DEFAULT_TYPE;
-  const words = String(text)
-    .toLowerCase()
-    .split(/[^a-z]+/) // split on non-letters so punctuation doesn't block matches
-    .filter(Boolean);
+  if (!text) return { type: DEFAULT_TYPE, guessed: true };
+  const lower = String(text).toLowerCase();
+  const words = lower.split(/[^a-z]+/).filter(Boolean);
   const wordSet = new Set(words);
+  // Normalized text with single spaces, for phrase (multi-word) matching.
+  const phrase = " " + words.join(" ") + " ";
 
   for (const type of TYPE_PRIORITY) {
     const kws = KEYWORDS[type];
     for (const kw of kws) {
-      if (wordSet.has(kw)) return type;
+      if (kw.indexOf(" ") === -1) {
+        if (wordSet.has(kw)) return { type, guessed: false };
+      } else {
+        // phrase keyword: match on the normalized text
+        if (phrase.indexOf(" " + kw + " ") !== -1) return { type, guessed: false };
+      }
     }
   }
-  return DEFAULT_TYPE;
+  return { type: DEFAULT_TYPE, guessed: true };
 }
 
 /**
@@ -160,12 +108,13 @@ function parseTasks(blob) {
     .filter((l) => l.length > 0);
 
   return lines.map((text, i) => {
-    const type = tagTaskType(text);
+    const guess = tagTaskType(text);
     return {
       id: i + 1,
       text,
-      type,
-      effort: effortForType(type), // guessed from type, user-editable
+      type: guess.type,
+      guessed: guess.guessed, // true when no keyword matched; UI flags it
+      effort: effortForType(guess.type), // guessed from type, user-editable
       due: "later", // today | tomorrow | later; user-editable
     };
   });
