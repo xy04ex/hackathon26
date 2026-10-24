@@ -672,3 +672,11 @@ body {
   .confetti-overlay { display: none; }
   .top-pop { animation: none; }
 }
+
+/* All data actions grouped in the "Your data" section. */
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}

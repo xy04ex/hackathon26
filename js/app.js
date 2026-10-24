@@ -420,11 +420,9 @@
       "</div>" +
       '<ul id="task-list" class="task-list"></ul>' +
       '<div id="reorder-foot" class="task-foot"></div>' +
-      '<p id="reorder-note" class="reorder-note muted"></p>' +
-      '<button id="export-btn" class="btn btn--secondary">Export history (JSON)</button>';
+      '<p id="reorder-note" class="reorder-note muted"></p>';
 
     section.querySelector("#tag-btn").addEventListener("click", onTagClick);
-    section.querySelector("#export-btn").addEventListener("click", onExportClick);
 
     renderTaskList();
   }
@@ -843,7 +841,7 @@
     prefillDeferredTasks();
   }
 
-  window.HuifanApp = { render: render };
+  window.HuifanApp = { render: render, exportHistory: onExportClick };
 
   document.addEventListener("DOMContentLoaded", function () {
     // Mount onboarding first: it hydrates window.HUIFAN_DAILY from localStorage

@@ -95,13 +95,17 @@
   }
 
   function renderManage(section) {
+    // All data actions live here in one place: download the parsed health
+    // dataset, export the task-log history, and delete everything.
     section.innerHTML =
       '<details class="onboarding-manage">' +
       "<summary>Your data</summary>" +
       '<p class="muted">Your health data stays in this browser.</p>' +
-      '<button id="ob-download" class="btn btn--secondary">Download parsed JSON</button> ' +
+      '<div class="data-actions">' +
+      '<button id="ob-download" class="btn btn--secondary">Download parsed JSON</button>' +
+      '<button id="ob-export" class="btn btn--secondary">Export history (JSON)</button>' +
       '<button id="ob-delete" class="btn btn--secondary">Delete my data</button>' +
-      "</details>";
+      "</div></details>";
     var del = section.querySelector("#ob-delete");
     if (del)
       del.addEventListener("click", function () {
@@ -113,6 +117,13 @@
     if (dl)
       dl.addEventListener("click", function () {
         downloadJson(root.HUIFAN_DAILY || loadDataset() || []);
+      });
+    var ex = section.querySelector("#ob-export");
+    if (ex)
+      ex.addEventListener("click", function () {
+        if (root.HuifanApp && typeof root.HuifanApp.exportHistory === "function") {
+          root.HuifanApp.exportHistory();
+        }
       });
   }
 
