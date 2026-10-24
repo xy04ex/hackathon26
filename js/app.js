@@ -476,7 +476,7 @@
       '<select class="task-due" data-idx="' + idx + '">' + dueOpts + "</select></label>" +
       "</span>" +
       reason + chunk +
-      (skipped ? '<span class="skip-flag">Not today — moves to tomorrow</span>' : "") +
+      (skipped ? '<span class="skip-flag">\u2192 tomorrow</span>' : "") +
       "</span>" +
       '<button class="task-skip" data-idx="' + idx + '">' +
       (skipped ? "Undo" : "Not today") + "</button>" +

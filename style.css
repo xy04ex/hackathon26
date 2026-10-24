@@ -283,8 +283,9 @@ body {
 
 .task-item--done { opacity: 0.7; }
 .task-item--done .task-text { text-decoration: line-through; }
-.task-item--skipped { opacity: 0.55; }
-.task-item--skipped .task-text { text-decoration: line-through; }
+/* Skipped is dimmed but NOT struck through (strikethrough means done). */
+.task-item--skipped { opacity: 0.5; }
+.task-item--skipped .task-text { text-decoration: none; }
 
 .move-reason {
   display: block;
@@ -299,10 +300,15 @@ body {
   margin-top: 3px;
 }
 .skip-flag {
-  display: block;
-  font-size: 0.76rem;
-  color: var(--ink3);
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
   margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: var(--ink2);
+  background: var(--sunk);
+  border: 1px solid var(--line);
 }
 
 .task-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
