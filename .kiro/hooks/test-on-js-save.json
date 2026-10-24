@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Run property tests on js/ save",
+      "trigger": "PostFileSave",
+      "description": "Runs the fast-check property tests for score.js and order.js whenever a file under js/ is saved, so core invariants stay green while editing.",
+      "matcher": "js/.*\\.js$",
+      "action": {
+        "type": "command",
+        "command": "cd tests && { [ -d node_modules ] || npm install --silent; } && npm test --silent",
+        "timeout": 180
+      }
+    }
+  ]
+}
