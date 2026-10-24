@@ -16,8 +16,8 @@ It is a free, on-device, WHOOP-like experience for people who don't own a WHOOP.
 - **Not a chatbot.** The score comes from a fixed, deterministic formula so today and tomorrow are directly comparable. Same input → same output.
 
 ## Core flow (the demo)
-1. User exports Apple Health data (export.zip) on their iPhone.
-2. A local Python script turns the huge export.xml into a small daily JSON (HRV, resting HR, sleep hours).
+1. User exports Apple Health data (export.zip) on their iPhone and **uploads it in the browser**. "Upload" means into the user's own browser only — the file is parsed locally and never sent anywhere.
+2. The browser parses export.zip locally (streaming unzip + XML in a Web Worker) into a small daily JSON (HRV, resting HR, respiratory rate, sleep hours). A local Python parser stays as a fallback for developers.
 3. The web page loads that JSON, computes a personal baseline from recent days, and shows today's recovery score with a plain-language reason ("HRV 12% below your usual, slept 6.1 h").
 4. User types or pastes today's tasks and marks each one's effort.
 5. 烩饭 shows the reordered list and one short line on why.
@@ -32,12 +32,12 @@ It is a free, on-device, WHOOP-like experience for people who don't own a WHOOP.
 CDC PLACES "short sleep duration among adults" for Massachusetts counties (2022) — the share of adults sleeping < 7 h. Used only as one line of context, e.g. "You slept 6.2 h. About X% of Suffolk County adults regularly sleep under 7 h." Never as a judgement of the user.
 
 ## Audience & framing
-- Hackathon tracks: BU College Hack; Hackachusetts Civic Action → "Better college experiences".
+- Hackathon tracks: Hackachusetts "Healthcare & Biotech — H1: Turning wearable data into better healthcare"; DS+X: CollegeHack (possibly entered as an individual).
 - Users: students first (exam weeks, irregular sleep, can't afford subscriptions). Wider use (shift workers, people with variable energy) is a belief to test, not a claim.
 - Pitch honestly: n=1 real use shows it works for one person; it does not prove broad impact. Copy in the UI and README must not overstate.
 
 ## Privacy
-Data stays on the user's device. No accounts, no login, no backend server, no analytics, no uploading health data anywhere. This is a core feature, not an afterthought.
+Data stays on the user's device. No accounts, no login, no backend server, no analytics. When the user "uploads" export.zip, it goes into their own browser only — it is parsed locally and no network call ever carries health data anywhere. This is a core feature, not an afterthought.
 
 ## Tone of the UI
 Calm, short, friendly, non-judgemental. A low score is information, not failure — never shame the user for sleeping badly.

@@ -5,14 +5,14 @@ inclusion: always
 # 烩饭 — tech
 
 ## Stack (keep it this small)
-- **Web app:** plain HTML + CSS + vanilla JavaScript. No framework, no build step, no npm install required to run. Opening `index.html` (or a simple local static server) must be enough.
-- **Data prep:** one Python 3 script, standard library only (`xml.etree.ElementTree` iterparse, `json`, `zipfile`, `datetime`). No pandas.
+- **Web app:** plain HTML + CSS + vanilla JavaScript. No framework, no build step, no npm install required to run. Opening `index.html` (or a simple local static server) must be enough. `npm` is allowed for **dev-only testing** (property-based tests with fast-check under `tests/`); it is never needed to run the app.
+- **Data prep:** the browser parses `export.zip` locally; one Python 3 script, standard library only (`xml.etree.ElementTree` iterparse, `json`, `zipfile`, `datetime`), stays as a developer fallback. No pandas.
 - **Storage:** browser `localStorage` for the daily history, wrapped in try/catch; the app must still work if storage is unavailable.
 - **No backend, no database, no external APIs at runtime.** The CDC file is downloaded once and committed as a static JSON.
 
 ## Apple Health export
 - iPhone Health app → profile → Export All Health Data → `export.zip` containing `apple_health_export/export.xml`.
-- export.xml can be hundreds of MB. **Never parse it in the browser.** Stream it in Python with `iterparse` and clear elements as you go.
+- export.xml can be hundreds of MB. In-browser parsing is allowed **only as streaming** (unzip + XML) inside a **Web Worker**, never loading the whole file into memory, with an option to read only the **last N months**. The Python parser stays as a fallback and also streams with `iterparse`, clearing elements as it goes.
 - Record types to extract:
   - `HKQuantityTypeIdentifierHeartRateVariabilitySDNN` (ms) → daily mean
   - `HKQuantityTypeIdentifierRestingHeartRate` (bpm) → daily value

@@ -14,30 +14,32 @@ hackathon26/
 │   ├── tag.js            # keyword task-type tagger (pure, fallback)
 │   ├── patterns.js       # render Beta-Binomial results (no math in browser)
 │   ├── insights.js       # render sleep→HRV + CDC context (no math in browser)
+│   ├── parse-worker.js   # in-browser streaming unzip + XML parse (Web Worker)
 │   └── app.js            # UI wiring, localStorage history
 ├── scripts/
-│   ├── parse_health.py       # export.zip/xml → data/daily.json (stdlib only)
-│   ├── tag_tasks_llm.py      # optional LLM tagging, reads .env (keyword is default)
+│   ├── parse_health.py       # export.zip/xml → data/daily.json (stdlib only, dev fallback)
 │   ├── fetch_cdc.py          # CDC PLACES MA → data/cdc-short-sleep-ma.json
 │   ├── make_sim_data.py      # labeled SIMULATED logs w/ planted pattern
 │   ├── patterns.py           # Beta-Binomial by type×tier → data/patterns.json
-│   ├── insights.py           # lagged sleep→HRV correlation → data/insights.json
-│   └── logistic_regression.py # stretch: completed ~ recovery_z * task_type
+│   └── insights.py           # lagged sleep→HRV correlation → data/insights.json
+├── tests/                # property-based tests (fast-check); dev-only, npm
 ├── data/
 │   ├── sample-daily.json        # synthetic demo data (committed)
 │   ├── cdc-short-sleep-ma.json  # CDC PLACES, MA counties (committed)
 │   ├── simulated-logs.json      # labeled SIMULATED task logs (committed)
 │   ├── patterns.json            # Beta-Binomial output (committed)
 │   └── insights.json            # correlation + CDC summary (committed)
-├── requirements.txt      # numpy, scipy, scikit-learn (analysis scripts only)
-├── .env.example          # shows LLM_API_KEY= (no real key)
-├── .kiro/steering/       # these files
+├── requirements.txt      # numpy, scipy (analysis scripts only)
+├── .kiro/
+│   ├── steering/         # these files
+│   ├── specs/            # feature specs (requirements → design → tasks)
+│   └── hooks/            # agent hooks (e.g. run tests on js/ save)
 └── README.md
 ```
 
 Note: the health parser (`parse_health.py`) uses the Python standard library only.
-Only the data-science scripts (`patterns.py`, `insights.py`, `logistic_regression.py`)
-need `requirements.txt`. The web app needs no install.
+Only the data-science scripts (`patterns.py`, `insights.py`) need `requirements.txt`.
+The web app needs no install; `npm` is only for the dev-only tests under `tests/`.
 
 ## Rules
 - Keep this layout unless there's a clear reason to change it; if you add a file, say where and why.
