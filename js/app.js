@@ -456,7 +456,11 @@
   }
 
   // --- Boot -----------------------------------------------------------
-  document.addEventListener("DOMContentLoaded", function () {
+  //
+  // render() is the whole-page render. It is exposed as window.HuifanApp.render
+  // so onboarding (js/onboarding.js) can re-render after a successful parse,
+  // after "Delete my data", or when showing sample data, without a full reload.
+  function render() {
     const { rows, source } = pickDataSource();
     recoveryContext.learnedDemotions = loadLearnedDemotions();
     renderScore(rows, source);
@@ -467,5 +471,16 @@
     if (window.HuifanInsights) {
       window.HuifanInsights.renderInsights("insights-section");
     }
+  }
+
+  window.HuifanApp = { render: render };
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Mount onboarding first: it hydrates window.HUIFAN_DAILY from localStorage
+    // (when present) and shows the first-run screen only when there is no data.
+    if (window.HuifanOnboarding) {
+      window.HuifanOnboarding.mount("onboarding-section");
+    }
+    render();
   });
 })();

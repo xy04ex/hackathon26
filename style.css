@@ -383,3 +383,73 @@ body {
 }
 .cdc-cite { margin: 6px 0 0; font-size: 0.75rem; }
 .insights-note { margin-top: 12px; font-size: 0.8rem; }
+
+/* --- Onboarding (browser-onboarding) --- */
+.onboarding h2 { margin: 0 0 6px; }
+.onboarding-steps {
+  margin: 12px 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.onboarding-steps code,
+.onboarding-privacy code,
+.onboarding-error code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+.onboarding-range {
+  display: block;
+  margin: 12px 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.onboarding-range .range-opts {
+  display: inline-flex;
+  gap: 14px;
+  margin-left: 8px;
+  color: var(--text);
+}
+.onboarding-file {
+  display: block;
+  margin: 10px 0;
+  font: inherit;
+  color: var(--text);
+}
+.onboarding-privacy { margin: 8px 0; }
+.onboarding-phone {
+  margin: 8px 0;
+  font-style: italic;
+}
+.onboarding-or { margin-top: 10px; }
+.onboarding-status { margin-top: 14px; }
+.onboarding-error {
+  color: var(--red, #b00020);
+  background: color-mix(in srgb, var(--red, #b00020) 12%, transparent);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.onboarding-manage summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.onboarding--sample { color: var(--muted); }
+
+/* Determinate progress bar */
+.ob-progress {
+  height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.ob-bar {
+  height: 100%;
+  background: var(--accent, #4a7);
+  transition: width 0.2s ease;
+}
