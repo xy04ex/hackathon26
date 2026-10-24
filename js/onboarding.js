@@ -128,6 +128,16 @@
     section.innerHTML =
       '<div class="onboarding">' +
       "<h2>Set up 烩饭</h2>" +
+      // USP: what makes Huifan different from a plain recovery score.
+      '<p class="usp">Other apps give you a score. Huifan turns it into ' +
+      "today\u2019s task order, then learns from what you actually get done.</p>" +
+      // Compact 4-step strip of the core loop.
+      '<ol class="usp-strip">' +
+      '<li><span class="usp-n">1</span>Read your data</li>' +
+      '<li><span class="usp-n">2</span>Reorder today</li>' +
+      '<li><span class="usp-n">3</span>Log what you did</li>' +
+      '<li><span class="usp-n">4</span>Learn your patterns</li>' +
+      "</ol>" +
       '<p class="muted">Bring in your Apple Health data to get a recovery ' +
       "score against your own baseline.</p>" +
       '<ol class="onboarding-steps">' +

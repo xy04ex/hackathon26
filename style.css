@@ -514,3 +514,50 @@ body {
 }
 @keyframes flick { from { transform: scale(1.06, .8); } to { transform: scale(.94, 1.08); } }
 @keyframes steam { 0% { opacity: 0; transform: translateY(7px); } 35% { opacity: .7; } 100% { opacity: 0; transform: translateY(-9px); } }
+
+/* --- First-screen USP + 4-step strip ---------------------------------- */
+.usp {
+  margin: 6px 0 12px;
+  font-size: 1.02rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.usp-strip {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.usp-strip li {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 128px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sunk);
+  color: var(--ink2);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+.usp-n {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--on-c);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+@media (max-width: 420px) {
+  .usp-strip li { min-width: 0; flex-basis: calc(50% - 8px); }
+}
