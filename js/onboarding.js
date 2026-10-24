@@ -139,10 +139,12 @@
 
     section.innerHTML =
       '<div class="onboarding">' +
-      "<h2>Set up 烩饭</h2>" +
+      // No duplicate app-name heading here; the header carries the name.
       // USP: what makes Huifan different from a plain recovery score.
-      '<p class="usp">Other apps give you a score. Huifan turns it into ' +
-      "today\u2019s task order, then learns from what you actually get done.</p>" +
+      '<p class="usp">Huifan turns your recovery score into today\u2019s task ' +
+      "order, then learns from what you actually get done.</p>" +
+      '<p class="usp-sub muted">\u70e9\u996d (hu\u00ecf\u00e0n) is a one-pot rice dish: ' +
+      "whatever you have, cooked together.</p>" +
       // Compact 4-step strip of the core loop.
       '<ol class="usp-strip">' +
       '<li><span class="usp-n">1</span>Read your data</li>' +

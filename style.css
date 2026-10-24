@@ -684,3 +684,5 @@ body {
   gap: 8px;
   margin-top: 8px;
 }
+
+.usp-sub { margin: 2px 0 12px; font-size: 0.82rem; font-style: italic; }
