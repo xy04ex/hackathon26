@@ -417,16 +417,13 @@
       'reply to emails&#10;fitrec work out&#10;coffee with Sam"></textarea>' +
       '<div class="task-actions">' +
       '<button id="tag-btn" class="btn">Tag tasks</button>' +
-      '<button id="reorder-btn" class="btn btn--secondary">Reorder for today</button>' +
       "</div>" +
       '<ul id="task-list" class="task-list"></ul>' +
-      '<div class="task-foot">' +
+      '<div id="reorder-foot" class="task-foot"></div>' +
       '<p id="reorder-note" class="reorder-note muted"></p>' +
-      '<button id="export-btn" class="btn btn--secondary">Export history (JSON)</button>' +
-      "</div>";
+      '<button id="export-btn" class="btn btn--secondary">Export history (JSON)</button>';
 
     section.querySelector("#tag-btn").addEventListener("click", onTagClick);
-    section.querySelector("#reorder-btn").addEventListener("click", onReorderClick);
     section.querySelector("#export-btn").addEventListener("click", onExportClick);
 
     renderTaskList();
@@ -504,11 +501,25 @@
     if (tasks.length === 0) {
       list.innerHTML =
         '<li class="muted task-empty">No tasks yet. Type some above and tag them.</li>';
+      renderReorderFoot();
       return;
     }
 
     list.innerHTML = tasks.map(renderTaskItem).join("");
     wireTaskControls(list);
+    renderReorderFoot();
+  }
+
+  // "Reorder for today" appears BELOW the list, and only after tagging (i.e.
+  // once there are tasks). Empty before that.
+  function renderReorderFoot() {
+    const foot = document.getElementById("reorder-foot");
+    if (!foot) return;
+    if (tasks.length === 0) { foot.innerHTML = ""; return; }
+    foot.innerHTML =
+      '<button id="reorder-btn" class="btn btn--secondary">Reorder for today</button>';
+    const btn = foot.querySelector("#reorder-btn");
+    if (btn) btn.addEventListener("click", onReorderClick);
   }
 
   // One task row: checkbox + text (+ guessed flag) + editable labelled selects
