@@ -10,3 +10,7 @@ data/daily.js
 
 .DS_Store
 __pycache__/
+
+# Dev-only test dependencies
+tests/node_modules/
+tests/package-lock.json
