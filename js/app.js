@@ -153,28 +153,166 @@
     todayScore.tier = result.band;
     todayScore.z = Math.round(result.composite * 10000) / 10000;
 
+    // The pot IS the score: flame size = band, number on the pot, toppings =
+    // today's tasks (coloured once done), steam = share of tasks done. We stash
+    // what the pot needs and draw it; check-in toggles call drawPot() again.
+    potState.scored = true;
+    potState.score = result.score;
+    potState.band = result.band;
+
     section.innerHTML =
       badge +
-      '<div class="score-row">' +
-      '<div class="score-dial score-dial--' +
-      result.band +
-      '">' +
-      '<span class="score-number">' +
-      result.score +
-      "</span>" +
-      '<span class="score-band">' +
-      result.band +
-      "</span>" +
-      "</div>" +
+      '<div class="stove" id="pot-box"></div>' +
       '<div class="score-meta">' +
       '<p class="score-date muted">' +
-      todayRow.date +
+      escapeHtml(todayRow.date) +
       "</p>" +
       '<p class="score-reason">' +
       escapeHtml(result.reason) +
       "</p>" +
-      "</div>" +
       "</div>";
+    drawPot();
+  }
+
+  // --- Pot visual (ported from Huifan v1; English labels) ----------------
+  //
+  // flame height = recovery band, score number on the pot, toppings = today's
+  // tasks (coloured when done, raw/dashed when not), steam = share of tasks
+  // done, lid on until a task list is in. All Chinese labels are translated.
+  var potState = { scored: false, score: null, band: null };
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  // Band codes: g = green/High, m = yellow/Medium, r = red/Low heat.
+  var HEAT = { green: "High heat", yellow: "Medium heat", red: "Low heat" };
+  var BAND_CODE = { green: "g", yellow: "m", red: "r" };
+  var FLAMES = { green: [7, 24], yellow: [5, 16], red: [3, 9] };
+  var SPOTS = [[118, 72], [84, 89], [153, 83], [100, 79], [136, 75], [167, 91], [110, 91], [143, 92]];
+  var ROWS = [[90, 57], [80.5, 46], [71.5, 32]];
+
+  function sv(tag, attrs, parent) {
+    var n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  function spotsFor(n) {
+    if (n <= SPOTS.length) return { r: 7, pts: SPOTS.slice(0, n) };
+    var sizes = [5.5, 4.5], r = 0, caps = [], total = 0;
+    for (var si = 0; si < sizes.length; si++) {
+      r = sizes[si];
+      caps = ROWS.map(function (row) { return Math.floor(2 * (row[1] - r - 2) / (2 * r + 2)) + 1; });
+      total = caps[0] + caps[1] + caps[2];
+      if (total >= n) break;
+    }
+    var m = Math.min(n, total), cnt = [0, 0, 0];
+    for (var k = 0; k < m; k++) {
+      var best = -1, bestFill = 2;
+      for (var i = 0; i < 3; i++) {
+        var fill = (cnt[i] + 1) / caps[i];
+        if (cnt[i] < caps[i] && fill < bestFill) { best = i; bestFill = fill; }
+      }
+      cnt[best]++;
+    }
+    var pts = [];
+    ROWS.forEach(function (row, i) {
+      for (var j = 0; j < cnt[i]; j++) pts.push([120 + (j - (cnt[i] - 1) / 2) * (2 * r + 2), row[0]]);
+    });
+    return { r: r, pts: pts };
+  }
+
+  // The tasks the pot shows: the reordered check-in list if present, else the
+  // tagged tasks. done-state comes from orderedTasks when available.
+  function potTasks() {
+    if (orderedTasks && orderedTasks.length) {
+      return orderedTasks.map(function (t) { return { done: !!t.done }; });
+    }
+    return (tasks || []).map(function () { return { done: false }; });
+  }
+
+  function drawPot() {
+    var box = document.getElementById("pot-box");
+    if (!box) return;
+    box.innerHTML = "";
+
+    var scored = potState.scored;
+    var band = scored ? potState.band : null;
+    var code = band ? BAND_CODE[band] : null;
+    var ts = potTasks();
+    var doneN = ts.filter(function (t) { return t.done; }).length;
+    var open = ts.length > 0;
+
+    // Accessible, English description of the whole picture.
+    var label = (scored ? HEAT[band] + ", recovery " + potState.score : open ? "not lit yet" : "nothing cooking yet") +
+      (open ? "; " + ts.length + " task" + (ts.length === 1 ? "" : "s") + " in the pot, " + doneN + " done" : "");
+    var svg = sv("svg", { viewBox: "18 0 244 212", role: "img", "aria-label": label }, box);
+
+    // steam = share of tasks done
+    var wisps = open && doneN ? Math.max(1, Math.round(doneN / ts.length * 3)) : 0;
+    [100, 122, 144].slice(0, wisps).forEach(function (x, i) {
+      var pth = sv("path", { "class": "st", d: "M" + x + " 50 q-7 -8 0 -16 q7 -8 0 -16" }, svg);
+      pth.style.animationDelay = (i * 0.9) + "s";
+    });
+
+    // rice + toppings (tasks), visible once the lid is off
+    if (open) {
+      sv("path", { "class": "pot-rice", d: "M56 97 Q120 30 184 97 Z" }, svg);
+      var lay = spotsFor(ts.length), tr = lay.r, tw = tr * 15 / 7, th = tr * 11 / 7;
+      ts.slice(0, lay.pts.length).forEach(function (t, i) {
+        var pp = lay.pts[i], cls = "top " + (t.done ? "f" + (i % 5 + 1) : "raw");
+        if (i % 2) sv("rect", { "class": cls, x: pp[0] - tw / 2, y: pp[1] - th / 2, width: tw, height: th, rx: tr / 2, transform: "rotate(" + (i * 23 - 30) + " " + pp[0] + " " + pp[1] + ")" }, svg);
+        else sv("circle", { "class": cls, cx: pp[0], cy: pp[1], r: tr }, svg);
+      });
+    }
+
+    // pot body
+    sv("rect", { "class": "pot-rim", x: 26, y: 112, width: 30, height: 13, rx: 6.5 }, svg);
+    sv("rect", { "class": "pot-rim", x: 184, y: 112, width: 30, height: 13, rx: 6.5 }, svg);
+    sv("path", { "class": "pot-body", d: "M52 104 L188 104 Q189 160 162 169 L78 169 Q51 160 52 104 Z" }, svg);
+    sv("rect", { "class": "pot-rim", x: 44, y: 94, width: 152, height: 13, rx: 6.5 }, svg);
+    [[66, 122], [74, 148], [92, 160], [168, 118], [174, 142], [154, 158], [84, 116], [160, 128], [108, 162], [140, 114]].forEach(function (pp, i) {
+      sv("circle", { "class": "pot-spk", cx: pp[0], cy: pp[1], r: i % 3 ? 1.3 : 2 }, svg);
+    });
+    if (scored) {
+      var num = sv("text", { "class": "pot-num", x: 120, y: 151, "text-anchor": "middle" }, svg);
+      num.textContent = String(potState.score);
+    }
+
+    // lid: on the pot until the list is in, then leaning against it
+    var lid = sv("g", { transform: open ? "translate(236 140) rotate(76) scale(.9)" : "translate(120 82)" }, svg);
+    sv("path", { "class": "pot-rim", d: "M-68 13 Q-64 -12 0 -14 Q64 -12 68 13 Z" }, lid);
+    sv("rect", { "class": "pot-body", x: -11, y: -25, width: 22, height: 12, rx: 6 }, lid);
+
+    // stove + flame (flame size = band)
+    sv("rect", { "class": "stove-bar", x: 66, y: 169, width: 6, height: 29 }, svg);
+    sv("rect", { "class": "stove-bar", x: 168, y: 169, width: 6, height: 29 }, svg);
+    sv("rect", { "class": "stove-bar", x: 40, y: 197, width: 216, height: 8, rx: 4 }, svg);
+    if (scored) {
+      var n = FLAMES[band][0], h = FLAMES[band][1];
+      for (var i = 0; i < n; i++) {
+        var x = 120 + (i - (n - 1) / 2) * 13;
+        var hh = h * (i % 2 ? 0.8 : 1);
+        var g = sv("g", { "class": "fl" }, svg);
+        g.style.animationDelay = (-i * 0.23) + "s";
+        sv("path", { "class": "fl-o", d: "M" + (x - 5.5) + " 197 Q" + (x - 7) + " " + (197 - hh * 0.5) + " " + x + " " + (197 - hh) + " Q" + (x + 7) + " " + (197 - hh * 0.5) + " " + (x + 5.5) + " 197 Z" }, g);
+        sv("path", { "class": "fl-i", d: "M" + (x - 2.5) + " 197 Q" + (x - 3.5) + " " + (197 - hh * 0.3) + " " + x + " " + (197 - hh * 0.55) + " Q" + (x + 3.5) + " " + (197 - hh * 0.3) + " " + (x + 2.5) + " 197 Z" }, g);
+      }
+    }
+
+    // caption chip (English)
+    var cap = document.createElement("div");
+    cap.className = "heat";
+    var chip = document.createElement("span");
+    chip.className = "heat-chip" + (code ? " " + code : "");
+    chip.textContent = scored ? HEAT[band] : open ? "not lit yet" : "nothing cooking yet";
+    cap.appendChild(chip);
+    if (open) {
+      var n2 = document.createElement("span");
+      n2.className = "heat-n";
+      n2.textContent = doneN === ts.length ? "all done — serve it up" : ts.length + " in the pot · " + doneN + " done";
+      cap.appendChild(n2);
+    }
+    box.appendChild(cap);
   }
 
   // Small escape so a date/reason string can never inject markup.
@@ -262,6 +400,7 @@
 
     // Persist today's list immediately so a record exists even before taps.
     persistToday();
+    drawPot();
   }
 
   function renderCheckinList() {
@@ -332,6 +471,7 @@
     orderedTasks[idx].done = !orderedTasks[idx].done;
     persistToday();
     renderCheckinList();
+    drawPot();
   }
 
   function persistToday() {
@@ -361,6 +501,7 @@
     if (!input) return;
     tasks = window.HuifanTag.parseTasks(input.value);
     renderTaskList();
+    drawPot();
   }
 
   function renderTaskList() {

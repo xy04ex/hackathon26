@@ -1,31 +1,72 @@
-/* 烩饭 — styles. Light + dark via CSS variables. Mobile-first. */
+/* 烩饭 — styles. Light + dark via CSS variables. Mobile-first.
+   Palette + fonts ported from the original Huifan v1 look (pot + stove). */
 
 :root {
-  --bg: #f7f7f5;
-  --card: #ffffff;
-  --text: #1c1c1e;
-  --muted: #6b6b70;
-  --border: #e3e3e0;
-  --accent: #3a7d6e;
-  /* Recovery band colors */
-  --green: #2e8b57;
-  --yellow: #c9a227;
-  --red: #c0504d;
+  /* v1 palette tokens */
+  --bg: #FAF3E3;
+  --surface: #FFFDF7;
+  --sunk: #F0E6D0;
+  --paper: #FFFEFA;
+  --ink: #2A1F1A;
+  --ink2: #6B5B50;
+  --ink3: #9A8A7C;
+  --line: #E3D6BD;
+  --accent: #1D4AA0;
+  --accent-soft: #DFE7F6;
+  --sign: #C8321E;
+  --sign-ink: #FFE9A8;
+  --mustard: #E9A820;
+  --good: #23875A;
+  --good-soft: #DCEFE4;
+  --mid: #9A6A08;
+  --mid-soft: #F5EBD0;
+  --bad: #BA3E32;
+  --bad-soft: #F6E0DC;
+  --pot: #1D4AA0;
+  --pot-dark: #153676;
+  --pot-ink: #FFFFFF;
+  --flame: #E2571C;
+  --flame2: #F7B32B;
+  --rice: #FFFDF5;
+  --raw: #EFE7D3;
+  --raw-line: #B4A78C;
+  --f1: #3E9B4F; --f2: #E8892B; --f3: #F2C230; --f4: #8A5A3C; --f5: #E77B6E;
+  --stove: #3A2E27;
+  --tile: #EADFC6;
+  --tile-bg: #FFFAEC;
+  --on-c: #FFFFFF;
+  --display: "ZCOOL QingKe HuangYou", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --body: "Red Hat Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
+  --mono: "Red Hat Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Aliases so existing component CSS keeps working against the v1 palette. */
+  --card: var(--surface);
+  --text: var(--ink);
+  --muted: var(--ink2);
+  --border: var(--line);
+  --green: var(--good);
+  --yellow: var(--mid);
+  --red: var(--bad);
+
   --radius: 14px;
   --gap: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161618;
-    --card: #1f1f22;
-    --text: #f0f0f2;
-    --muted: #9a9aa0;
-    --border: #2e2e32;
-    --accent: #58b09c;
-    --green: #4caf7d;
-    --yellow: #d9b94a;
-    --red: #d97570;
+  :root:not([data-theme="light"]) {
+    --bg: #17120F; --surface: #211A16; --sunk: #120E0B; --paper: #261E19;
+    --ink: #F1E8DC; --ink2: #B9AA9B; --ink3: #8A7B6D; --line: #3A2F27;
+    --accent: #8FB0EE; --accent-soft: #1C2A45;
+    --sign: #A82A19; --sign-ink: #FFE08A; --mustard: #E9B23A;
+    --good: #5CCB93; --good-soft: #143024;
+    --mid: #E2B550; --mid-soft: #33290F;
+    --bad: #EE8377; --bad-soft: #3A1C18;
+    --pot: #2C5BC0; --pot-dark: #1D418F; --pot-ink: #F4F7FF;
+    --flame: #F2702F; --flame2: #FFC94A;
+    --rice: #EDE8DA; --raw: #C9C5B6; --raw-line: #8F8B7C;
+    --stove: #6A5A4E; --tile: #2E251F; --tile-bg: #1D1713;
+    --on-c: #17120F;
+    color-scheme: dark;
   }
 }
 
@@ -35,7 +76,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--body);
   line-height: 1.5;
 }
 
@@ -50,7 +91,9 @@ body {
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 2rem;
+  font-family: var(--display);
+  letter-spacing: .5px;
 }
 
 .app-header .latin {
@@ -100,39 +143,8 @@ body {
 }
 
 /* --- Recovery score card --- */
-.score-row {
-  display: flex;
-  align-items: center;
-  gap: var(--gap);
-}
-.score-dial {
-  flex: 0 0 auto;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-}
-.score-dial--green { background: var(--green); }
-.score-dial--yellow { background: var(--yellow); }
-.score-dial--red { background: var(--red); }
-.score-number {
-  font-size: 2.1rem;
-  font-weight: 700;
-  line-height: 1;
-}
-.score-band {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 2px;
-}
-.score-meta { flex: 1 1 auto; }
-.score-date { margin: 0 0 4px; font-size: 0.85rem; }
-.score-reason { margin: 0; }
+/* score text (pot visual lives in the appended v1 pot styles) */
+.score-reason { margin: 4px 0 0; }
 .score-learning { margin: 0; color: var(--muted); }
 
 /* --- Task input + list --- */
@@ -453,3 +465,49 @@ body {
   background: var(--accent, #4a7);
   transition: width 0.2s ease;
 }
+
+
+/* --- v1 pot / stove / flame (recovery visual) ------------------------- */
+.stove {
+  flex: 0 0 auto;
+  width: 232px;
+  max-width: 100%;
+  margin-inline: auto;
+  border-radius: 10px;
+  padding: 10px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--tile-bg);
+  background-image: linear-gradient(var(--tile) 1px, transparent 1px), linear-gradient(90deg, var(--tile) 1px, transparent 1px);
+  background-size: 29px 29px;
+  background-position: -1px -1px;
+}
+.stove svg { width: 100%; height: auto; display: block; }
+.pot-body { fill: var(--pot); }
+.pot-rim { fill: var(--pot-dark); }
+.pot-spk { fill: var(--pot-ink); opacity: .32; }
+.pot-num { fill: var(--pot-ink); font-family: var(--display); font-size: 40px; font-variant-numeric: tabular-nums; }
+.pot-rice { fill: var(--rice); stroke: var(--raw-line); stroke-width: 1; }
+.top.raw { fill: var(--raw); stroke: var(--raw-line); stroke-width: 1.2; stroke-dasharray: 2.5 2; }
+.top.f1 { fill: var(--f1); } .top.f2 { fill: var(--f2); } .top.f3 { fill: var(--f3); } .top.f4 { fill: var(--f4); } .top.f5 { fill: var(--f5); }
+.stove-bar { fill: var(--stove); }
+.fl-o { fill: var(--flame); } .fl-i { fill: var(--flame2); }
+.fl { transform-box: fill-box; transform-origin: 50% 100%; }
+.st { fill: none; stroke: var(--ink3); stroke-width: 3; stroke-linecap: round; opacity: .55; }
+.heat { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 8px; }
+.heat-chip { font-size: 12.5px; font-weight: 600; border-radius: 20px; padding: 2px 10px; background: var(--sunk); color: var(--ink2); white-space: nowrap; }
+.heat-chip.g { background: var(--good-soft); color: var(--good); }
+.heat-chip.m { background: var(--mid-soft); color: var(--mid); }
+.heat-chip.r { background: var(--bad-soft); color: var(--bad); }
+.heat-n { font-family: var(--mono); font-size: 11.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.score-meta { margin-top: 10px; text-align: center; }
+.score-date { font-family: var(--mono); font-size: 12px; }
+.rec-wait { margin: 0; font-size: 14.5px; color: var(--ink2); }
+@media (prefers-reduced-motion: no-preference) {
+  .fl { animation: flick .8s ease-in-out infinite alternate; }
+  .st { animation: steam 3s ease-in-out infinite; }
+}
+@keyframes flick { from { transform: scale(1.06, .8); } to { transform: scale(.94, 1.08); } }
+@keyframes steam { 0% { opacity: 0; transform: translateY(7px); } 35% { opacity: .7; } 100% { opacity: 0; transform: translateY(-9px); } }
