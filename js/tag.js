@@ -49,6 +49,9 @@ const KEYWORDS = {
     "email", "emails", "reply", "schedule", "book", "pay", "bill", "bills",
     "form", "forms", "submit", "register", "errand", "errands", "organize",
     "file", "sort", "calendar", "appointment", "admin",
+    // errands / shopping
+    "target", "restock", "groceries", "grocery", "shopping", "buy", "pick up",
+    "laundry", "pharmacy",
   ],
   physical: [
     "workout", "work out", "gym", "fitrec", "run", "running", "yoga", "swim",
